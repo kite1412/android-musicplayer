@@ -1,22 +1,34 @@
 package com.nrr.musicplayer.view
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,10 +43,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nrr.musicplayer.R
 import com.nrr.musicplayer.view_model.MainViewModel
 
 @Composable
@@ -49,7 +63,9 @@ fun Main(
             vm = vm,
             modifier = Modifier.height(headerHeight)
         )
-
+        PlayBar(
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -77,7 +93,7 @@ private fun Header(
         }
         Text(
             text = "Music Player",
-            color = Color.White,
+            color = if (isSystemInDarkTheme()) Color.Black else Color.White,
             fontSize = 32.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier
@@ -127,8 +143,9 @@ private fun Menu(
     onClick: (String) -> Unit
 ) {
     val color by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary
-            else Color.Gray,
+        targetValue = if (selected) if (!isSystemInDarkTheme()) Color.White
+            else Color.Black
+                else Color.Gray,
         label = "textColor"
     )
     val defaultFontSize = MaterialTheme.typography.bodyLarge.fontSize.value
@@ -146,4 +163,103 @@ private fun Menu(
         color = color,
         fontSize = fontSize.sp
     )
+}
+
+@Composable
+private fun PlayBar(
+    modifier: Modifier = Modifier
+) {
+    BoxWithConstraints(
+        modifier = modifier
+            .padding(16.dp)
+            .height(70.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.onBackground)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(0.9f)
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                MusicNoteIcon()
+                PlayBarActions(
+                    playing = false,
+                    onStateChange = { /*TODO*/ },
+                    onClose = { /*TODO*/ },
+                )
+            }
+            LinearProgressIndicator(
+                progress = { 0.5f },
+                modifier = Modifier
+                    .width(this@BoxWithConstraints.maxWidth * 0.8f)
+                    .fillMaxHeight()
+                    .clip(CircleShape)
+                    .weight(0.1f),
+                trackColor = Color.Black,
+                color = Color.White
+            )
+        }
+    }
+}
+
+@SuppressLint("UnrememberedMutableInteractionSource")
+@Composable
+private fun PlayBarActions(
+    playing: Boolean,
+    onStateChange: (playing: Boolean) -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val tint = if (isSystemInDarkTheme()) Color.Black else Color.White
+        AnimatedContent(
+            targetState = playing,
+            label = "state"
+        ) {
+            if (!it) Icon(
+                painter = painterResource(id = R.drawable.play),
+                contentDescription = "start",
+                modifier = Modifier.clickable(
+                    indication = null,
+                    interactionSource = MutableInteractionSource()
+                ) { onStateChange(false) },
+                tint = tint
+            ) else Icon(
+                painter = painterResource(id = R.drawable.pause),
+                contentDescription = "pause",
+                modifier = Modifier.clickable(
+                    indication = null,
+                    interactionSource = MutableInteractionSource()
+                ) { onStateChange(true) },
+                tint = tint
+            )
+        }
+        Icon(
+            imageVector = Icons.Rounded.Close,
+            contentDescription = "close",
+            modifier = Modifier
+                .size(28.dp)
+                .clickable(
+                    indication = null,
+                    interactionSource = MutableInteractionSource(),
+                    onClick = onClose
+                ),
+            tint = tint
+        )
+    }
 }
