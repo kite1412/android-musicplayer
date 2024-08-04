@@ -2,8 +2,11 @@ package com.nrr.musicplayer.view
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -59,13 +62,23 @@ fun Main(
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val headerHeight = LocalConfiguration.current.screenHeightDp.dp / 4 + statusBarHeight
     Box(modifier = modifier.fillMaxSize()) {
-        Header(
-            vm = vm,
-            modifier = Modifier.height(headerHeight)
-        )
-        PlayBar(
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
+        AnimatedVisibility(
+            visible = vm.animate,
+            enter = slideInVertically()
+        ) {
+            Header(
+                vm = vm,
+                modifier = Modifier.height(headerHeight)
+            )
+        }
+        AnimatedVisibility(
+            visible = vm.animate && vm.showPlayBar,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = slideInVertically { it / 2 },
+            exit = slideOutVertically { it },
+        ) {
+            PlayBar(vm)
+        }
     }
 }
 
@@ -167,6 +180,7 @@ private fun Menu(
 
 @Composable
 private fun PlayBar(
+    vm: MainViewModel,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(
@@ -192,11 +206,18 @@ private fun PlayBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                MusicNoteIcon()
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(0.8f)
+                ) {
+                    MusicNoteIcon()
+                    SlidingText(text = "asdddddddddddddddddd")
+                }
                 PlayBarActions(
-                    playing = false,
-                    onStateChange = { /*TODO*/ },
-                    onClose = { /*TODO*/ },
+                    playing = vm.playing,
+                    onStateChange = { vm.playing = it },
+                    onClose = { vm.showPlayBar = false },
+                    modifier = Modifier.weight(0.2f)
                 )
             }
             LinearProgressIndicator(
@@ -231,21 +252,13 @@ private fun PlayBarActions(
             targetState = playing,
             label = "state"
         ) {
-            if (!it) Icon(
-                painter = painterResource(id = R.drawable.play),
-                contentDescription = "start",
+            Icon(
+                painter = painterResource(id = if (!it) R.drawable.play else R.drawable.pause),
+                contentDescription = if (!it) "start" else "pause",
                 modifier = Modifier.clickable(
                     indication = null,
                     interactionSource = MutableInteractionSource()
-                ) { onStateChange(false) },
-                tint = tint
-            ) else Icon(
-                painter = painterResource(id = R.drawable.pause),
-                contentDescription = "pause",
-                modifier = Modifier.clickable(
-                    indication = null,
-                    interactionSource = MutableInteractionSource()
-                ) { onStateChange(true) },
+                ) { onStateChange(!it) },
                 tint = tint
             )
         }
