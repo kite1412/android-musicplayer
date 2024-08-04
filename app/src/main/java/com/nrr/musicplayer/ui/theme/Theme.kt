@@ -9,28 +9,46 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = SlateBlue,
+    secondary = BurntUmber,
+    tertiary = MossGreen,
+    background = DeepCharcoal,
+    surface = DeepCharcoal,
+    onPrimary = SoftSilver,
+    onSecondary = SoftSilver,
+    onTertiary = SoftSilver,
+    onBackground = SoftSilver,
+    onSurface = SoftSilver,
+    primaryContainer = AmberGlow,
+    secondaryContainer = WarmCopper,
+    tertiaryContainer = GunmetalGray,
+    onPrimaryContainer = DeepCharcoal,
+    onSecondaryContainer = DeepCharcoal,
+    onTertiaryContainer = DeepCharcoal
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primary = SoftSage,
+    secondary = SunsetPeach,
+    tertiary = DuskyRose,
+    background = CreamyWhite,
+    surface = CreamyWhite,
+    onPrimary = WarmCharcoal,
+    onSecondary = WarmCharcoal,
+    onTertiary = WarmCharcoal,
+    onBackground = WarmCharcoal,
+    onSurface = WarmCharcoal,
+    primaryContainer = LightMint,
+    secondaryContainer = SoftApricot,
+    tertiaryContainer = LightTaupe,
+    onPrimaryContainer = WarmCharcoal,
+    onSecondaryContainer = WarmCharcoal,
+    onTertiaryContainer = WarmCharcoal
 )
 
 @Composable
@@ -52,7 +70,11 @@ fun MusicPlayerTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = Typography.copy(
+            bodyLarge = Typography.bodyLarge.copy(
+                color = colorScheme.onBackground
+            )
+        ),
         content = content
     )
 }
