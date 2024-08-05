@@ -30,7 +30,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -41,14 +43,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -56,6 +63,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -65,6 +73,7 @@ import com.nrr.musicplayer.R
 import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.ui.theme.SoftSilver
 import com.nrr.musicplayer.ui.theme.WarmCharcoal
+import com.nrr.musicplayer.util.ScrollConnection
 import com.nrr.musicplayer.view_model.MainViewModel
 import com.nrr.musicplayer.view_model.SharedViewModel
 
@@ -77,10 +86,22 @@ fun Main(
     vm: MainViewModel = viewModel(modelClass = MainViewModel::class)
 ) {
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val headerHeight = LocalConfiguration.current.screenHeightDp.dp / 4 + statusBarHeight
+    val config = LocalConfiguration.current
+    var minHeaderHeight by remember {
+        mutableStateOf(0.dp)
+    }
+    val totalHeaderHeight by remember {
+        derivedStateOf { config.screenHeightDp.dp / 4 + statusBarHeight - minHeaderHeight }
+    }
+    var headerHeight by remember {
+        mutableStateOf(totalHeaderHeight)
+    }
     val sharedViewModel = viewModel(SharedViewModel::class, LocalContext.current as ComponentActivity)
     val filesLoader = LocalAudioFilesLoader.current
     val granted = LocalPermissionGranted.current
+    var titleAlpha by rememberSaveable {
+        mutableFloatStateOf(1f)
+    }
     LaunchedEffect(granted) {
         if (!vm.executeOnce && granted) {
             filesLoader().also {
@@ -91,7 +112,24 @@ fun Main(
             vm.executeOnce = true
         }
     }
-    Box(modifier = modifier.fillMaxSize()) {
+    val density = LocalDensity.current
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .nestedScroll(
+                with(density) {
+                    ScrollConnection(
+                        consume = headerHeight > minHeaderHeight
+                    ) {
+                        val value = it.toDp()
+                        if (value <= 0.dp) if (value >= headerHeight) headerHeight = minHeaderHeight
+                            else if (headerHeight + value > minHeaderHeight) headerHeight += value
+                                else headerHeight = minHeaderHeight
+                        titleAlpha = (headerHeight - minHeaderHeight) / totalHeaderHeight
+                    }
+                }
+            )
+    ) {
         AnimatedVisibility(
             visible = vm.animate,
             enter = slideInVertically { -it }
@@ -113,8 +151,9 @@ fun Main(
         ) {
             Header(
                 vm = vm,
-                modifier = Modifier.height(headerHeight)
-            )
+                modifier = Modifier.height(headerHeight),
+                titleAlpha = titleAlpha
+            ) { minHeaderHeight = it + statusBarHeight }
         }
         AnimatedVisibility(
             visible = vm.animate && vm.showPlayBar,
@@ -130,7 +169,9 @@ fun Main(
 @Composable
 private fun Header(
     vm: MainViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    titleAlpha: Float = 1f,
+    menusHeight: (Dp) -> Unit = {}
 ) {
     val configuration = LocalConfiguration.current
     Box(
@@ -152,11 +193,12 @@ private fun Header(
         Text(
             text = "Music Player",
             color = if (isSystemInDarkTheme()) Color.Black else Color.White,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.SemiBold,
             modifier = Modifier
                 .align(Alignment.Center)
                 .padding(bottom = titleBottomPadding)
+                .alpha(titleAlpha),
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 32.sp
         )
         Menus(
             vm = vm,
@@ -164,7 +206,9 @@ private fun Header(
                 .align(Alignment.BottomCenter)
                 .onGloballyPositioned {
                     with(density) {
-                        titleBottomPadding = it.size.height.toDp()
+                        val height = it.size.height.toDp()
+                        titleBottomPadding = height
+                        menusHeight(height)
                     }
                 }
         )
@@ -327,6 +371,7 @@ private fun PlayBarActions(
 private fun Songs(
     files: List<FormattedAudioFile>,
     modifier: Modifier = Modifier,
+    state: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues(
         horizontal = 8.dp,
         vertical = 0.dp
@@ -334,6 +379,7 @@ private fun Songs(
 ) {
     if (files.isNotEmpty()) LazyColumn(
         modifier = modifier,
+        state = state,
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = contentPadding
     ) {
@@ -380,7 +426,10 @@ private fun Song(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(text = file.duration)
+            Text(
+                text = file.duration,
+                fontSize = 12.sp
+            )
         }
     }
 }
