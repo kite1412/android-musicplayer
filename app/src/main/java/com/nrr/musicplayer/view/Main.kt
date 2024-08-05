@@ -1,6 +1,7 @@
 package com.nrr.musicplayer.view
 
 import android.annotation.SuppressLint
+import androidx.activity.ComponentActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -15,6 +16,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -26,6 +29,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,6 +40,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,14 +51,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nrr.musicplayer.LocalAudioFilesLoader
 import com.nrr.musicplayer.R
+import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.view_model.MainViewModel
+import com.nrr.musicplayer.view_model.SharedViewModel
+
+private val playBarPadding = 16.dp
+private val playBarHeight = 70.dp
 
 @Composable
 fun Main(
@@ -61,7 +75,29 @@ fun Main(
 ) {
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val headerHeight = LocalConfiguration.current.screenHeightDp.dp / 4 + statusBarHeight
+    val sharedViewModel = viewModel(SharedViewModel::class, LocalContext.current as ComponentActivity)
+    val filesLoader = LocalAudioFilesLoader.current
+    LaunchedEffect(true) {
+        if (!vm.executeOnce) {
+            filesLoader().also {
+                sharedViewModel.audioFiles.addAll(
+                    FormattedAudioFile.from(it.audioFiles)
+                )
+            }
+            vm.executeOnce = true
+        }
+    }
     Box(modifier = modifier.fillMaxSize()) {
+        Songs(
+            files = sharedViewModel.audioFiles,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 8.dp,
+                end = 8.dp,
+                top = headerHeight + 16.dp,
+                bottom = playBarHeight + playBarPadding * 2
+            )
+        )
         AnimatedVisibility(
             visible = vm.animate,
             enter = slideInVertically()
@@ -185,8 +221,8 @@ private fun PlayBar(
 ) {
     BoxWithConstraints(
         modifier = modifier
-            .padding(16.dp)
-            .height(70.dp)
+            .padding(playBarPadding)
+            .height(playBarHeight)
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.onBackground)
@@ -274,5 +310,51 @@ private fun PlayBarActions(
                 ),
             tint = tint
         )
+    }
+}
+
+@Composable
+private fun Songs(
+    files: List<FormattedAudioFile>,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(
+        horizontal = 8.dp,
+        vertical = 0.dp
+    ),
+) {
+    LazyColumn(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = contentPadding
+    ) {
+        items(files) {
+            Song(file = it)
+        }
+    }
+}
+
+@Composable
+private fun Song(
+    file: FormattedAudioFile,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Max),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        MusicNoteIcon()
+        Column(
+            modifier = Modifier.fillMaxHeight(),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = file.displayName,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(text = file.duration)
+        }
     }
 }

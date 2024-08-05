@@ -29,7 +29,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nrr.musicplayer.R
-import com.nrr.musicplayer.util.Log
 import kotlinx.coroutines.delay
 
 @Composable
@@ -87,7 +86,6 @@ fun SlidingText(
                         offsetX += it
                     }
                 }
-                Log.d("offset: $offsetX:$textLength")
             } else {
                 delay(100)
                 state.scrollBy(-offsetX)

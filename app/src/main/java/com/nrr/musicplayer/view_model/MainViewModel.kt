@@ -12,6 +12,7 @@ class MainViewModel : ViewModel() {
     val menus = listOf("Songs", "Playlists")
     var currentMenu by mutableStateOf(menus[0])
     var animate by mutableStateOf(false)
+    var executeOnce by mutableStateOf(false)
     var playing by mutableStateOf(false)
     var showPlayBar by mutableStateOf(true)
 
