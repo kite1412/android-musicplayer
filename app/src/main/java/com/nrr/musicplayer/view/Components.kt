@@ -77,11 +77,12 @@ fun SlidingText(
     val state = rememberLazyListState()
     val density = LocalDensity.current
     LaunchedEffect(isOverflow, pause) {
+        delay(2000)
         while (isOverflow && !pause) {
-            if (offsetX <= textLength) {
-                delay(50)
+            if (offsetX < textLength) {
+                delay(15)
                 with(density) {
-                    2.dp.toPx().also {
+                    1.dp.toPx().also {
                         state.scrollBy(it)
                         offsetX += it
                     }
@@ -98,15 +99,15 @@ fun SlidingText(
     }
     LaunchedEffect(pause) {
         if (pause) {
-            delay(2000)
             pause = false
         }
     }
     BoxWithConstraints(modifier.fillMaxSize()) {
+        val space = maxWidth / 2
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             state = state,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(space),
             userScrollEnabled = false
         ) {
             item {
@@ -117,9 +118,9 @@ fun SlidingText(
                     onTextLayout = {
                         with(density) {
                             val width = it.size.width
-                            if (width >= this@BoxWithConstraints.maxWidth.value) {
+                            if (width >= this@BoxWithConstraints.maxWidth.toPx()) {
                                 isOverflow = true
-                                textLength = width + 8.dp.toPx()
+                                textLength = width + space.toPx()
                             }
                         }
                     }
