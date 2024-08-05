@@ -1,31 +1,53 @@
 package com.nrr.musicplayer
 
+import android.Manifest
 import android.annotation.SuppressLint
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.nrr.musicplayer.model.AudioFile
 import com.nrr.musicplayer.model.AudioFiles
 import com.nrr.musicplayer.ui.theme.MusicPlayerTheme
 import com.nrr.musicplayer.util.Log
+import com.nrr.musicplayer.util.minApiLevel
 import com.nrr.musicplayer.view.Main
 
 val LocalAudioFilesLoader = compositionLocalOf<() -> AudioFiles> { { AudioFiles() } }
@@ -80,11 +102,46 @@ class MainActivity : ComponentActivity() {
         return AudioFiles(audioFiles, error)
     }
 
+    private fun musicAudioAccessPermitted(): Boolean = minApiLevel(
+        minApiLevel = Build.VERSION_CODES.TIRAMISU,
+        onApiLevelRange = {
+            checkSelfPermission(Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
+        },
+        onApiLevelBelow = {
+            checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+    )
+
+    private fun requestPermission(launcher: ManagedActivityResultLauncher<String, Boolean>) {
+        launcher.launch(
+            input = minApiLevel(
+                minApiLevel = Build.VERSION_CODES.TIRAMISU,
+                onApiLevelRange = { Manifest.permission.READ_MEDIA_AUDIO },
+                onApiLevelBelow = { Manifest.permission.READ_EXTERNAL_STORAGE }
+            )
+        )
+    }
+
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            var permissionGranted by rememberSaveable {
+                mutableStateOf(false)
+            }
+            var showWarning by rememberSaveable {
+                mutableStateOf(false)
+            }
+            val permissionLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
+                if (it) permissionGranted = true
+                    else if (!musicAudioAccessPermitted()) showWarning = true
+                        else permissionGranted = true
+            }
+            LaunchedEffect(true) {
+                if (!musicAudioAccessPermitted()) requestPermission(permissionLauncher)
+                    else permissionGranted = true
+            }
             CompositionLocalProvider(value = LocalAudioFilesLoader provides { loadAudioFiles() }) {
                 MusicPlayerTheme {
                     adjustSystemBars()
@@ -99,7 +156,50 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Main()
                         }
+                        PermissionWarning(
+                            show = showWarning,
+                            onRequestPermission = {
+                                showWarning = false
+                                requestPermission(permissionLauncher)
+                            }
+                        )
                     }
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun PermissionWarning(
+        show: Boolean,
+        onRequestPermission: () -> Unit,
+        modifier: Modifier = Modifier
+    ) {
+        if (show) Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+        ) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(24.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "This app requires access to your music and audio files"
+                )
+                TextButton(
+                    onClick = onRequestPermission,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text(
+                        text = "OK",
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
                 }
             }
         }

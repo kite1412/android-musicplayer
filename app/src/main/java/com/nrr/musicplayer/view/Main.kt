@@ -62,6 +62,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nrr.musicplayer.LocalAudioFilesLoader
 import com.nrr.musicplayer.R
 import com.nrr.musicplayer.model.FormattedAudioFile
+import com.nrr.musicplayer.ui.theme.SoftSilver
+import com.nrr.musicplayer.ui.theme.WarmCharcoal
 import com.nrr.musicplayer.view_model.MainViewModel
 import com.nrr.musicplayer.view_model.SharedViewModel
 
@@ -88,16 +90,21 @@ fun Main(
         }
     }
     Box(modifier = modifier.fillMaxSize()) {
-        Songs(
-            files = sharedViewModel.audioFiles,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 8.dp,
-                end = 8.dp,
-                top = headerHeight + 16.dp,
-                bottom = playBarHeight + playBarPadding * 2
+        AnimatedVisibility(
+            visible = vm.animate,
+            enter = slideInVertically { -it }
+        ) {
+            Songs(
+                files = sharedViewModel.audioFiles,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 8.dp,
+                    end = 8.dp,
+                    top = headerHeight + 16.dp,
+                    bottom = playBarHeight + playBarPadding * 2
+                )
             )
-        )
+        }
         AnimatedVisibility(
             visible = vm.animate,
             enter = slideInVertically()
@@ -192,9 +199,7 @@ private fun Menu(
     onClick: (String) -> Unit
 ) {
     val color by animateColorAsState(
-        targetValue = if (selected) if (!isSystemInDarkTheme()) Color.White
-            else Color.Black
-                else Color.Gray,
+        targetValue = if (selected) Color.White else Color.Gray,
         label = "textColor"
     )
     val defaultFontSize = MaterialTheme.typography.bodyLarge.fontSize.value
@@ -246,7 +251,10 @@ private fun PlayBar(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.weight(0.8f)
                 ) {
-                    MusicNoteIcon()
+                    MusicNoteIcon(
+                        backgroundColor = Color.White,
+                        tint = Color.Black
+                    )
                     SlidingText(text = "asdddddddddddddddddd")
                 }
                 PlayBarActions(
@@ -283,7 +291,7 @@ private fun PlayBarActions(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val tint = if (isSystemInDarkTheme()) Color.Black else Color.White
+        val tint = Color.White
         AnimatedContent(
             targetState = playing,
             label = "state"
@@ -322,7 +330,7 @@ private fun Songs(
         vertical = 0.dp
     ),
 ) {
-    LazyColumn(
+    if (files.isNotEmpty()) LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = contentPadding
@@ -330,6 +338,22 @@ private fun Songs(
         items(files) {
             Song(file = it)
         }
+    } else Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        val config = LocalConfiguration.current
+        Icon(
+            painter = painterResource(id = R.drawable.box_open),
+            contentDescription = "empty",
+            modifier = Modifier.size(config.screenWidthDp.dp / 3),
+            tint = if (isSystemInDarkTheme()) SoftSilver else WarmCharcoal
+        )
+        Text(
+            text = "No songs found",
+            fontSize = 20.sp
+        )
     }
 }
 

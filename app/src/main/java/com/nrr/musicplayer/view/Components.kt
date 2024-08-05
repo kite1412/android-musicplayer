@@ -2,6 +2,7 @@ package com.nrr.musicplayer.view
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -29,14 +30,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nrr.musicplayer.R
+import com.nrr.musicplayer.ui.theme.WarmCharcoal
 import kotlinx.coroutines.delay
 
 @Composable
 fun MusicNoteIcon(
     modifier: Modifier = Modifier,
-    tint: Color = Color.Black,
+    tint: Color = if (!isSystemInDarkTheme()) Color.Black else Color.White,
     size: Dp = 48.dp,
-    backgroundColor: Color = Color.White,
+    backgroundColor: Color = if (!isSystemInDarkTheme()) Color.White else WarmCharcoal,
     clipSize: Dp = 8.dp
 ) {
     Box(

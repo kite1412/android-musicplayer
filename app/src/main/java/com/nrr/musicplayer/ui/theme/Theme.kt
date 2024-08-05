@@ -19,7 +19,7 @@ private val DarkColorScheme = darkColorScheme(
     onPrimary = SoftSilver,
     onSecondary = SoftSilver,
     onTertiary = SoftSilver,
-    onBackground = SoftSilver,
+    onBackground = WarmCharcoal,
     onSurface = SoftSilver,
     primaryContainer = AmberGlow,
     secondaryContainer = WarmCopper,
@@ -69,7 +69,7 @@ fun MusicPlayerTheme(
         colorScheme = colorScheme,
         typography = Typography.copy(
             bodyLarge = Typography.bodyLarge.copy(
-                color = colorScheme.onBackground
+                color = if (darkTheme) SoftSilver else WarmCharcoal
             )
         ),
         content = content
