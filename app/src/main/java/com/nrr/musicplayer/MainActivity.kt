@@ -51,6 +51,7 @@ import com.nrr.musicplayer.util.minApiLevel
 import com.nrr.musicplayer.view.Main
 
 val LocalAudioFilesLoader = compositionLocalOf<() -> AudioFiles> { { AudioFiles() } }
+val LocalPermissionGranted = compositionLocalOf { false }
 
 class MainActivity : ComponentActivity() {
     @SuppressLint("ComposableNaming")
@@ -143,26 +144,28 @@ class MainActivity : ComponentActivity() {
                     else permissionGranted = true
             }
             CompositionLocalProvider(value = LocalAudioFilesLoader provides { loadAudioFiles() }) {
-                MusicPlayerTheme {
-                    adjustSystemBars()
-                    Scaffold(
-                        modifier = Modifier.fillMaxSize(),
-                    ) { _ ->
-                        Box(
-                            modifier = Modifier
-                                .background(MaterialTheme.colorScheme.background)
-                                .windowInsetsPadding(WindowInsets.navigationBars)
-                                .consumeWindowInsets(WindowInsets.navigationBars)
-                        ) {
-                            Main()
-                        }
-                        PermissionWarning(
-                            show = showWarning,
-                            onRequestPermission = {
-                                showWarning = false
-                                requestPermission(permissionLauncher)
+                CompositionLocalProvider(value = LocalPermissionGranted provides permissionGranted) {
+                    MusicPlayerTheme {
+                        adjustSystemBars()
+                        Scaffold(
+                            modifier = Modifier.fillMaxSize(),
+                        ) { _ ->
+                            Box(
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.background)
+                                    .windowInsetsPadding(WindowInsets.navigationBars)
+                                    .consumeWindowInsets(WindowInsets.navigationBars)
+                            ) {
+                                Main()
                             }
-                        )
+                            PermissionWarning(
+                                show = showWarning,
+                                onRequestPermission = {
+                                    showWarning = false
+                                    requestPermission(permissionLauncher)
+                                }
+                            )
+                        }
                     }
                 }
             }

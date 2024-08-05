@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nrr.musicplayer.LocalAudioFilesLoader
+import com.nrr.musicplayer.LocalPermissionGranted
 import com.nrr.musicplayer.R
 import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.ui.theme.SoftSilver
@@ -79,8 +80,9 @@ fun Main(
     val headerHeight = LocalConfiguration.current.screenHeightDp.dp / 4 + statusBarHeight
     val sharedViewModel = viewModel(SharedViewModel::class, LocalContext.current as ComponentActivity)
     val filesLoader = LocalAudioFilesLoader.current
-    LaunchedEffect(true) {
-        if (!vm.executeOnce) {
+    val granted = LocalPermissionGranted.current
+    LaunchedEffect(granted) {
+        if (!vm.executeOnce && granted) {
             filesLoader().also {
                 sharedViewModel.audioFiles.addAll(
                     FormattedAudioFile.from(it.audioFiles)
