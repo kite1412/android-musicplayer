@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nrr.musicplayer.LocalAudioFilesLoader
 import com.nrr.musicplayer.LocalPermissionGranted
+import com.nrr.musicplayer.MainActivity
 import com.nrr.musicplayer.R
 import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.ui.theme.SoftSilver
@@ -392,6 +393,7 @@ private fun Songs(
         vertical = 0.dp
     ),
 ) {
+    val context = LocalContext.current as MainActivity
     if (files.isNotEmpty()) LazyColumn(
         modifier = modifier,
         state = state,
@@ -399,7 +401,12 @@ private fun Songs(
         contentPadding = contentPadding
     ) {
         items(files) {
-            Song(file = it)
+            Song(
+                file = it,
+                modifier = Modifier.clickable {
+                    context.play(it)
+                }
+            )
         }
     } else Column(
         modifier = modifier.fillMaxSize(),

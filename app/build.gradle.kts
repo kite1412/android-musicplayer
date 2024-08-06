@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    id("kotlin-parcelize")
 }
 
 android {
@@ -63,6 +64,8 @@ dependencies {
     // added
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.compose.cloudy)
+    implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.media3.exoplayer)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

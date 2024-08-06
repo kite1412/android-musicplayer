@@ -1,12 +1,15 @@
 package com.nrr.musicplayer.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import java.util.concurrent.TimeUnit
 
+@Parcelize
 data class FormattedAudioFile(
     val displayName: String,
     val duration: String,
     val raw: AudioFile
-) {
+) : Parcelable {
     companion object {
         private fun from(raw: AudioFile): FormattedAudioFile = FormattedAudioFile(
             displayName = raw.displayName.replace(".mp3", ""),

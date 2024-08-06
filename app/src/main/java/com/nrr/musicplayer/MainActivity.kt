@@ -2,6 +2,7 @@ package com.nrr.musicplayer
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -43,8 +44,15 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.MoreExecutors
 import com.nrr.musicplayer.model.AudioFile
 import com.nrr.musicplayer.model.AudioFiles
+import com.nrr.musicplayer.model.FormattedAudioFile
+import com.nrr.musicplayer.service.PlaybackService
 import com.nrr.musicplayer.ui.theme.MusicPlayerTheme
 import com.nrr.musicplayer.util.Log
 import com.nrr.musicplayer.util.minApiLevel
@@ -54,6 +62,8 @@ val LocalAudioFilesLoader = compositionLocalOf<() -> AudioFiles> { { AudioFiles(
 val LocalPermissionGranted = compositionLocalOf { false }
 
 class MainActivity : ComponentActivity() {
+    private var mediaController: MediaController? = null
+
     @SuppressLint("ComposableNaming")
     @Composable
     private fun adjustSystemBars() {
@@ -121,6 +131,41 @@ class MainActivity : ComponentActivity() {
                 onApiLevelBelow = { Manifest.permission.READ_EXTERNAL_STORAGE }
             )
         )
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val token = SessionToken(this, ComponentName(this, PlaybackService::class.java))
+        MediaController.Builder(this, token).buildAsync().apply {
+            addListener(
+                { mediaController = get() },
+                MoreExecutors.directExecutor()
+            )
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        mediaController?.release()
+    }
+
+    fun play(file: FormattedAudioFile) {
+        mediaController?.apply {
+            setMediaItem(
+                MediaItem.Builder()
+                    .setMediaId("media")
+                    .setUri(file.raw.data)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(file.displayName)
+                            .setAlbumTitle(file.raw.album)
+                            .build()
+                    )
+                    .build()
+            )
+            prepare()
+            play()
+        }
     }
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
