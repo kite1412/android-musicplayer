@@ -5,8 +5,8 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class AudioFile(
-    val displayName: String,
-    val duration: Int,
-    val album: String,
-    val data: String
+    val displayName: String = "",
+    val duration: Int = 0,
+    val album: String = "",
+    val data: String = ""
 ) : Parcelable

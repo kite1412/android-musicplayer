@@ -44,14 +44,11 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
 import com.nrr.musicplayer.model.AudioFile
 import com.nrr.musicplayer.model.AudioFiles
-import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.service.PlaybackService
 import com.nrr.musicplayer.ui.theme.MusicPlayerTheme
 import com.nrr.musicplayer.util.Log
@@ -60,9 +57,10 @@ import com.nrr.musicplayer.view.Main
 
 val LocalAudioFilesLoader = compositionLocalOf<() -> AudioFiles> { { AudioFiles() } }
 val LocalPermissionGranted = compositionLocalOf { false }
+val LocalMediaController = compositionLocalOf<MediaController?> { null }
 
 class MainActivity : ComponentActivity() {
-    private var mediaController: MediaController? = null
+    private var mediaController: MediaController? by mutableStateOf(null)
 
     @SuppressLint("ComposableNaming")
     @Composable
@@ -149,25 +147,6 @@ class MainActivity : ComponentActivity() {
         mediaController?.release()
     }
 
-    fun play(file: FormattedAudioFile) {
-        mediaController?.apply {
-            setMediaItem(
-                MediaItem.Builder()
-                    .setMediaId("media")
-                    .setUri(file.raw.data)
-                    .setMediaMetadata(
-                        MediaMetadata.Builder()
-                            .setTitle(file.displayName)
-                            .setAlbumTitle(file.raw.album)
-                            .build()
-                    )
-                    .build()
-            )
-            prepare()
-            play()
-        }
-    }
-
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -190,26 +169,28 @@ class MainActivity : ComponentActivity() {
             }
             CompositionLocalProvider(value = LocalAudioFilesLoader provides { loadAudioFiles() }) {
                 CompositionLocalProvider(value = LocalPermissionGranted provides permissionGranted) {
-                    MusicPlayerTheme {
-                        adjustSystemBars()
-                        Scaffold(
-                            modifier = Modifier.fillMaxSize(),
-                        ) { _ ->
-                            Box(
-                                modifier = Modifier
-                                    .background(MaterialTheme.colorScheme.background)
-                                    .windowInsetsPadding(WindowInsets.navigationBars)
-                                    .consumeWindowInsets(WindowInsets.navigationBars)
-                            ) {
-                                Main()
-                            }
-                            PermissionWarning(
-                                show = showWarning,
-                                onRequestPermission = {
-                                    showWarning = false
-                                    requestPermission(permissionLauncher)
+                    CompositionLocalProvider(value = LocalMediaController provides mediaController) {
+                        MusicPlayerTheme {
+                            adjustSystemBars()
+                            Scaffold(
+                                modifier = Modifier.fillMaxSize(),
+                            ) { _ ->
+                                Box(
+                                    modifier = Modifier
+                                        .background(MaterialTheme.colorScheme.background)
+                                        .windowInsetsPadding(WindowInsets.navigationBars)
+                                        .consumeWindowInsets(WindowInsets.navigationBars)
+                                ) {
+                                    Main()
                                 }
-                            )
+                                PermissionWarning(
+                                    show = showWarning,
+                                    onRequestPermission = {
+                                        showWarning = false
+                                        requestPermission(permissionLauncher)
+                                    }
+                                )
+                            }
                         }
                     }
                 }

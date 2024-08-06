@@ -14,7 +14,7 @@ class MainViewModel : ViewModel() {
     var animate by mutableStateOf(false)
     var executeOnce by mutableStateOf(false)
     var playing by mutableStateOf(false)
-    var showPlayBar by mutableStateOf(true)
+    var closePlayBar by mutableStateOf(false)
 
     init {
         viewModelScope.launch {

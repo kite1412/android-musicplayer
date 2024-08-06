@@ -31,7 +31,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -67,10 +66,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nrr.musicplayer.LocalAudioFilesLoader
+import com.nrr.musicplayer.LocalMediaController
 import com.nrr.musicplayer.LocalPermissionGranted
-import com.nrr.musicplayer.MainActivity
 import com.nrr.musicplayer.R
 import com.nrr.musicplayer.model.FormattedAudioFile
+import com.nrr.musicplayer.model.playing
 import com.nrr.musicplayer.ui.theme.SoftSilver
 import com.nrr.musicplayer.ui.theme.WarmCharcoal
 import com.nrr.musicplayer.util.ScrollConnection
@@ -83,7 +83,7 @@ private val playBarHeight = 70.dp
 @Composable
 fun Main(
     modifier: Modifier = Modifier,
-    vm: MainViewModel = viewModel(modelClass = MainViewModel::class)
+    vm: MainViewModel = viewModel(MainViewModel::class)
 ) {
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val config = LocalConfiguration.current
@@ -137,7 +137,8 @@ fun Main(
                         else if (value >= totalHeaderHeight) headerHeight = totalHeaderHeight
                         else if (headerHeight + value < totalHeaderHeight) headerHeight += value
                         else headerHeight = totalHeaderHeight
-                        collapsedOrExpanded = headerHeight == totalHeaderHeight || headerHeight == minHeaderHeight
+                        collapsedOrExpanded =
+                            headerHeight == totalHeaderHeight || headerHeight == minHeaderHeight
                         titleAlpha =
                             if (value <= 0.dp) (headerHeight - minHeaderHeight) / totalHeaderHeight
                             else headerHeight / totalHeaderHeight
@@ -151,6 +152,7 @@ fun Main(
         ) {
             Songs(
                 files = sharedViewModel.audioFiles,
+                sharedViewModel = sharedViewModel,
                 modifier = Modifier.fillMaxSize(),
                 state = state,
                 contentPadding = PaddingValues(
@@ -171,13 +173,16 @@ fun Main(
                 titleAlpha = titleAlpha
             ) { minHeaderHeight = it + statusBarHeight }
         }
+        val playing by remember {
+            derivedStateOf { sharedViewModel.currentlyPlaying.playing() }
+        }
         AnimatedVisibility(
-            visible = vm.animate && vm.showPlayBar,
+            visible = vm.animate && !vm.closePlayBar && playing,
             modifier = Modifier.align(Alignment.BottomCenter),
             enter = slideInVertically { it / 2 },
             exit = slideOutVertically { it },
         ) {
-            PlayBar(vm)
+            PlayBar(vm, sharedViewModel)
         }
     }
 }
@@ -284,6 +289,7 @@ private fun Menu(
 @Composable
 private fun PlayBar(
     vm: MainViewModel,
+    sharedViewModel: SharedViewModel,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(
@@ -301,6 +307,7 @@ private fun PlayBar(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            val currentlyPlaying = sharedViewModel.currentlyPlaying
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -317,17 +324,17 @@ private fun PlayBar(
                         backgroundColor = Color.White,
                         tint = Color.Black
                     )
-                    SlidingText(text = "asdddddddddddddddddd")
+                    SlidingText(text = currentlyPlaying.data.value.displayName)
                 }
                 PlayBarActions(
                     playing = vm.playing,
                     onStateChange = { vm.playing = it },
-                    onClose = { vm.showPlayBar = false },
+                    onClose = { vm.closePlayBar = true },
                     modifier = Modifier.weight(0.2f)
                 )
             }
             LinearProgressIndicator(
-                progress = { 0.5f },
+                progress = { currentlyPlaying.playbackProgress.value },
                 modifier = Modifier
                     .width(this@BoxWithConstraints.maxWidth * 0.8f)
                     .fillMaxHeight()
@@ -386,6 +393,7 @@ private fun PlayBarActions(
 @Composable
 private fun Songs(
     files: List<FormattedAudioFile>,
+    sharedViewModel: SharedViewModel,
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues(
@@ -393,18 +401,18 @@ private fun Songs(
         vertical = 0.dp
     ),
 ) {
-    val context = LocalContext.current as MainActivity
+    val mediaController = LocalMediaController.current
     if (files.isNotEmpty()) LazyColumn(
         modifier = modifier,
         state = state,
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = contentPadding
     ) {
-        items(files) {
+        items(files.size) {
             Song(
-                file = it,
+                file = files[it],
                 modifier = Modifier.clickable {
-                    context.play(it)
+                    sharedViewModel.play(mediaController, it, files)
                 }
             )
         }
@@ -449,7 +457,7 @@ private fun Song(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = file.duration,
+                text = file.durationDisplay,
                 fontSize = 12.sp
             )
         }
