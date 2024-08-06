@@ -48,7 +48,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -91,7 +90,7 @@ fun Main(
         mutableStateOf(0.dp)
     }
     val totalHeaderHeight by remember {
-        derivedStateOf { config.screenHeightDp.dp / 4 + statusBarHeight - minHeaderHeight }
+        derivedStateOf { config.screenHeightDp.dp / 4 + statusBarHeight }
     }
     var headerHeight by remember {
         mutableStateOf(totalHeaderHeight)
@@ -99,7 +98,7 @@ fun Main(
     val sharedViewModel = viewModel(SharedViewModel::class, LocalContext.current as ComponentActivity)
     val filesLoader = LocalAudioFilesLoader.current
     val granted = LocalPermissionGranted.current
-    var titleAlpha by rememberSaveable {
+    var titleAlpha by remember {
         mutableFloatStateOf(1f)
     }
     LaunchedEffect(granted) {
@@ -113,19 +112,34 @@ fun Main(
         }
     }
     val density = LocalDensity.current
+    val state = rememberLazyListState()
+    val expandHeader by remember {
+        derivedStateOf {
+            state.firstVisibleItemScrollOffset == 0 && state.firstVisibleItemIndex == 0
+        }
+    }
+    var collapsedOrExpanded by remember(expandHeader) {
+        mutableStateOf(false)
+    }
     Box(
         modifier = modifier
             .fillMaxSize()
             .nestedScroll(
                 with(density) {
                     ScrollConnection(
-                        consume = headerHeight > minHeaderHeight
+                        consume = !collapsedOrExpanded
                     ) {
                         val value = it.toDp()
                         if (value <= 0.dp) if (value >= headerHeight) headerHeight = minHeaderHeight
-                            else if (headerHeight + value > minHeaderHeight) headerHeight += value
-                                else headerHeight = minHeaderHeight
-                        titleAlpha = (headerHeight - minHeaderHeight) / totalHeaderHeight
+                        else if (headerHeight + value > minHeaderHeight) headerHeight += value
+                        else headerHeight = minHeaderHeight
+                        else if (value >= totalHeaderHeight) headerHeight = totalHeaderHeight
+                        else if (headerHeight + value < totalHeaderHeight) headerHeight += value
+                        else headerHeight = totalHeaderHeight
+                        collapsedOrExpanded = headerHeight == totalHeaderHeight || headerHeight == minHeaderHeight
+                        titleAlpha =
+                            if (value <= 0.dp) (headerHeight - minHeaderHeight) / totalHeaderHeight
+                            else headerHeight / totalHeaderHeight
                     }
                 }
             )
@@ -137,6 +151,7 @@ fun Main(
             Songs(
                 files = sharedViewModel.audioFiles,
                 modifier = Modifier.fillMaxSize(),
+                state = state,
                 contentPadding = PaddingValues(
                     start = 8.dp,
                     end = 8.dp,
