@@ -1,7 +1,6 @@
 package com.nrr.musicplayer.view
 
 import android.annotation.SuppressLint
-import androidx.activity.ComponentActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -56,7 +55,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -66,14 +64,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nrr.musicplayer.LocalAudioFilesLoader
-import com.nrr.musicplayer.LocalMediaController
 import com.nrr.musicplayer.LocalPermissionGranted
+import com.nrr.musicplayer.LocalPlayback
 import com.nrr.musicplayer.R
 import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.model.playing
 import com.nrr.musicplayer.ui.theme.SoftSilver
 import com.nrr.musicplayer.ui.theme.WarmCharcoal
 import com.nrr.musicplayer.util.ScrollConnection
+import com.nrr.musicplayer.util.sharedViewModel
 import com.nrr.musicplayer.view_model.MainViewModel
 import com.nrr.musicplayer.view_model.SharedViewModel
 
@@ -96,7 +95,7 @@ fun Main(
     var headerHeight by remember {
         mutableStateOf(totalHeaderHeight)
     }
-    val sharedViewModel = viewModel(SharedViewModel::class, LocalContext.current as ComponentActivity)
+    val sharedViewModel = sharedViewModel()
     val filesLoader = LocalAudioFilesLoader.current
     val granted = LocalPermissionGranted.current
     var titleAlpha by remember {
@@ -173,9 +172,8 @@ fun Main(
                 titleAlpha = titleAlpha
             ) { minHeaderHeight = it + statusBarHeight }
         }
-        val playing by remember {
-            derivedStateOf { sharedViewModel.currentlyPlaying.playing() }
-        }
+        val playbackListener = LocalPlayback.current
+        val playing = playbackListener.playbackItem.playing()
         AnimatedVisibility(
             visible = vm.animate && !vm.closePlayBar && playing,
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -307,7 +305,7 @@ private fun PlayBar(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            val currentlyPlaying = sharedViewModel.currentlyPlaying
+            val playback = LocalPlayback.current
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -324,7 +322,7 @@ private fun PlayBar(
                         backgroundColor = Color.White,
                         tint = Color.Black
                     )
-                    SlidingText(text = currentlyPlaying.data.value.displayName)
+                    SlidingText(text = playback.playbackItem.data.value.displayName)
                 }
                 PlayBarActions(
                     playing = vm.playing,
@@ -334,7 +332,7 @@ private fun PlayBar(
                 )
             }
             LinearProgressIndicator(
-                progress = { currentlyPlaying.playbackProgress.value },
+                progress = { playback.playbackItem.playbackProgress.value },
                 modifier = Modifier
                     .width(this@BoxWithConstraints.maxWidth * 0.8f)
                     .fillMaxHeight()
@@ -401,7 +399,7 @@ private fun Songs(
         vertical = 0.dp
     ),
 ) {
-    val mediaController = LocalMediaController.current
+    val playback = LocalPlayback.current
     if (files.isNotEmpty()) LazyColumn(
         modifier = modifier,
         state = state,
@@ -412,7 +410,7 @@ private fun Songs(
             Song(
                 file = files[it],
                 modifier = Modifier.clickable {
-                    sharedViewModel.play(mediaController, it, files)
+                    playback.play(it, files)
                 }
             )
         }

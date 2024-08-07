@@ -1,6 +1,11 @@
 package com.nrr.musicplayer.util
 
 import android.os.Build
+import androidx.activity.ComponentActivity
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nrr.musicplayer.view_model.SharedViewModel
 
 inline fun <reified T> minApiLevel(
     minApiLevel: Int,
@@ -8,3 +13,9 @@ inline fun <reified T> minApiLevel(
     onApiLevelBelow: () -> T,
 ): T = if (Build.VERSION.SDK_INT >= minApiLevel) onApiLevelRange()
         else onApiLevelBelow()
+
+@Composable
+fun sharedViewModel(): SharedViewModel = viewModel(
+    modelClass = SharedViewModel::class,
+    viewModelStoreOwner = LocalContext.current as ComponentActivity
+)

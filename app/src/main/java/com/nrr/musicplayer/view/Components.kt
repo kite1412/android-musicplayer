@@ -63,7 +63,7 @@ fun SlidingText(
     text: String,
     modifier: Modifier = Modifier
 ) {
-    var isOverflow by remember {
+    var isOverflow by remember(text) {
         mutableStateOf(false)
     }
     var pause by remember {
@@ -72,7 +72,7 @@ fun SlidingText(
     var offsetX by remember {
         mutableFloatStateOf(0f)
     }
-    var textLength by remember {
+    var textLength by remember() {
         mutableFloatStateOf(0f)
     }
     val state = rememberLazyListState()

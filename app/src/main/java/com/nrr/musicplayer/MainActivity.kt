@@ -47,6 +47,7 @@ import androidx.core.view.WindowCompat
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
+import com.nrr.musicplayer.media.Playback
 import com.nrr.musicplayer.model.AudioFile
 import com.nrr.musicplayer.model.AudioFiles
 import com.nrr.musicplayer.service.PlaybackService
@@ -58,9 +59,11 @@ import com.nrr.musicplayer.view.Main
 val LocalAudioFilesLoader = compositionLocalOf<() -> AudioFiles> { { AudioFiles() } }
 val LocalPermissionGranted = compositionLocalOf { false }
 val LocalMediaController = compositionLocalOf<MediaController?> { null }
+val LocalPlayback = compositionLocalOf { Playback(null) }
 
 class MainActivity : ComponentActivity() {
     private var mediaController: MediaController? by mutableStateOf(null)
+    private var playback: Playback by mutableStateOf(Playback(null))
 
     @SuppressLint("ComposableNaming")
     @Composable
@@ -136,7 +139,12 @@ class MainActivity : ComponentActivity() {
         val token = SessionToken(this, ComponentName(this, PlaybackService::class.java))
         MediaController.Builder(this, token).buildAsync().apply {
             addListener(
-                { mediaController = get() },
+                {
+                    mediaController = get().apply {
+                        playback = Playback(this)
+                        addListener(playback)
+                    }
+                },
                 MoreExecutors.directExecutor()
             )
         }
@@ -170,32 +178,39 @@ class MainActivity : ComponentActivity() {
             CompositionLocalProvider(value = LocalAudioFilesLoader provides { loadAudioFiles() }) {
                 CompositionLocalProvider(value = LocalPermissionGranted provides permissionGranted) {
                     CompositionLocalProvider(value = LocalMediaController provides mediaController) {
-                        MusicPlayerTheme {
-                            adjustSystemBars()
-                            Scaffold(
-                                modifier = Modifier.fillMaxSize(),
-                            ) { _ ->
-                                Box(
-                                    modifier = Modifier
-                                        .background(MaterialTheme.colorScheme.background)
-                                        .windowInsetsPadding(WindowInsets.navigationBars)
-                                        .consumeWindowInsets(WindowInsets.navigationBars)
-                                ) {
-                                    Main()
-                                }
-                                PermissionWarning(
-                                    show = showWarning,
-                                    onRequestPermission = {
-                                        showWarning = false
-                                        requestPermission(permissionLauncher)
+                        CompositionLocalProvider(value = LocalPlayback provides playback) {
+                            MusicPlayerTheme {
+                                adjustSystemBars()
+                                Scaffold(
+                                    modifier = Modifier.fillMaxSize(),
+                                ) { _ ->
+                                    Box(
+                                        modifier = Modifier
+                                            .background(MaterialTheme.colorScheme.background)
+                                            .windowInsetsPadding(WindowInsets.navigationBars)
+                                            .consumeWindowInsets(WindowInsets.navigationBars)
+                                    ) {
+                                        Main()
                                     }
-                                )
+                                    PermissionWarning(
+                                        show = showWarning,
+                                        onRequestPermission = {
+                                            showWarning = false
+                                            requestPermission(permissionLauncher)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        playback.restart()
     }
 
     @Composable
