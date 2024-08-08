@@ -65,7 +65,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nrr.musicplayer.LocalAudioFilesLoader
 import com.nrr.musicplayer.LocalPermissionGranted
-import com.nrr.musicplayer.LocalPlayback
+import com.nrr.musicplayer.LocalPlayer
 import com.nrr.musicplayer.R
 import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.model.playing
@@ -172,7 +172,7 @@ fun Main(
                 titleAlpha = titleAlpha
             ) { minHeaderHeight = it + statusBarHeight }
         }
-        val playbackListener = LocalPlayback.current
+        val playbackListener = LocalPlayer.current
         val playing = playbackListener.playbackItem.playing()
         AnimatedVisibility(
             visible = vm.animate && !vm.closePlayBar && playing,
@@ -305,7 +305,7 @@ private fun PlayBar(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            val playback = LocalPlayback.current
+            val playback = LocalPlayer.current
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -399,7 +399,7 @@ private fun Songs(
         vertical = 0.dp
     ),
 ) {
-    val playback = LocalPlayback.current
+    val playback = LocalPlayer.current
     if (files.isNotEmpty()) LazyColumn(
         modifier = modifier,
         state = state,

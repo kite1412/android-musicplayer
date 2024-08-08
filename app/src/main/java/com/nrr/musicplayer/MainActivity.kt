@@ -33,6 +33,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -47,9 +48,11 @@ import androidx.core.view.WindowCompat
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
-import com.nrr.musicplayer.media.Playback
+import com.nrr.musicplayer.media.Player
 import com.nrr.musicplayer.model.AudioFile
 import com.nrr.musicplayer.model.AudioFiles
+import com.nrr.musicplayer.model.FormattedAudioFile
+import com.nrr.musicplayer.model.PlaybackItem
 import com.nrr.musicplayer.service.PlaybackService
 import com.nrr.musicplayer.ui.theme.MusicPlayerTheme
 import com.nrr.musicplayer.util.Log
@@ -58,12 +61,13 @@ import com.nrr.musicplayer.view.Main
 
 val LocalAudioFilesLoader = compositionLocalOf<() -> AudioFiles> { { AudioFiles() } }
 val LocalPermissionGranted = compositionLocalOf { false }
-val LocalMediaController = compositionLocalOf<MediaController?> { null }
-val LocalPlayback = compositionLocalOf { Playback(null) }
+val LocalPlayer = compositionLocalOf { Player(null) }
 
 class MainActivity : ComponentActivity() {
     private var mediaController: MediaController? by mutableStateOf(null)
-    private var playback: Playback by mutableStateOf(Playback(null))
+    private var player: Player by mutableStateOf(Player(null))
+    private val playbackItemData = "playback_item_data"
+    private val playbackTimeProgress = "playback_item_progress"
 
     @SuppressLint("ComposableNaming")
     @Composable
@@ -134,83 +138,103 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    override fun onStart() {
-        super.onStart()
-        val token = SessionToken(this, ComponentName(this, PlaybackService::class.java))
-        MediaController.Builder(this, token).buildAsync().apply {
-            addListener(
-                {
-                    mediaController = get().apply {
-                        playback = Playback(this)
-                        addListener(playback)
-                    }
-                },
-                MoreExecutors.directExecutor()
-            )
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        mediaController?.release()
-    }
-
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent {
-            var permissionGranted by rememberSaveable {
-                mutableStateOf(false)
+        setContent { App(savedInstanceState = savedInstanceState) }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mediaController?.release()
+        player.restart()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putParcelable(playbackItemData, player.playbackItem.data.value)
+        outState.putFloat(playbackTimeProgress, player.playbackItem.playbackProgress.value)
+    }
+
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+    @Composable
+    private fun App(savedInstanceState: Bundle?) {
+        LaunchedEffect(true) {
+            val token = SessionToken(
+                this@MainActivity,
+                ComponentName(this@MainActivity, PlaybackService::class.java)
+            )
+            MediaController.Builder(this@MainActivity, token).buildAsync().apply {
+                addListener(
+                    {
+                        mediaController?.removeListener(player)
+                        mediaController = get().apply {
+                            player = Player(
+                                mediaController = this,
+                                initialPlaybackItem = if (savedInstanceState != null)
+                                    PlaybackItem(
+                                        data = mutableStateOf(
+                                            minApiLevel(
+                                                minApiLevel = Build.VERSION_CODES.TIRAMISU,
+                                                onApiLevelRange = { savedInstanceState.getParcelable(playbackItemData, FormattedAudioFile::class.java) },
+                                                onApiLevelBelow = { savedInstanceState.getParcelable(playbackItemData) }
+                                            ) ?: FormattedAudioFile()
+                                        ),
+                                        playbackProgress = mutableFloatStateOf(savedInstanceState.getFloat(playbackTimeProgress))
+                                    ) else PlaybackItem()
+                            )
+                            player.listen()
+                            addListener(this@MainActivity.player)
+                        }
+                    },
+                    MoreExecutors.directExecutor()
+                )
             }
-            var showWarning by rememberSaveable {
-                mutableStateOf(false)
-            }
-            val permissionLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
-                if (it) permissionGranted = true
-                    else if (!musicAudioAccessPermitted()) showWarning = true
-                        else permissionGranted = true
-            }
-            LaunchedEffect(true) {
-                if (!musicAudioAccessPermitted()) requestPermission(permissionLauncher)
-                    else permissionGranted = true
-            }
-            CompositionLocalProvider(value = LocalAudioFilesLoader provides { loadAudioFiles() }) {
-                CompositionLocalProvider(value = LocalPermissionGranted provides permissionGranted) {
-                    CompositionLocalProvider(value = LocalMediaController provides mediaController) {
-                        CompositionLocalProvider(value = LocalPlayback provides playback) {
-                            MusicPlayerTheme {
-                                adjustSystemBars()
-                                Scaffold(
-                                    modifier = Modifier.fillMaxSize(),
-                                ) { _ ->
-                                    Box(
-                                        modifier = Modifier
-                                            .background(MaterialTheme.colorScheme.background)
-                                            .windowInsetsPadding(WindowInsets.navigationBars)
-                                            .consumeWindowInsets(WindowInsets.navigationBars)
-                                    ) {
-                                        Main()
-                                    }
-                                    PermissionWarning(
-                                        show = showWarning,
-                                        onRequestPermission = {
-                                            showWarning = false
-                                            requestPermission(permissionLauncher)
-                                        }
-                                    )
-                                }
+        }
+        var permissionGranted by rememberSaveable {
+            mutableStateOf(false)
+        }
+        var showWarning by rememberSaveable {
+            mutableStateOf(false)
+        }
+        val permissionLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) {
+            if (it) permissionGranted = true
+            else if (!musicAudioAccessPermitted()) showWarning = true
+            else permissionGranted = true
+        }
+        LaunchedEffect(true) {
+            if (!musicAudioAccessPermitted()) requestPermission(permissionLauncher)
+            else permissionGranted = true
+        }
+        CompositionLocalProvider(value = LocalAudioFilesLoader provides { loadAudioFiles() }) {
+            CompositionLocalProvider(value = LocalPermissionGranted provides permissionGranted) {
+                CompositionLocalProvider(value = LocalPlayer provides player) {
+                    MusicPlayerTheme {
+                        adjustSystemBars()
+                        Scaffold(
+                            modifier = Modifier.fillMaxSize(),
+                        ) { _ ->
+                            Box(
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.background)
+                                    .windowInsetsPadding(WindowInsets.navigationBars)
+                                    .consumeWindowInsets(WindowInsets.navigationBars)
+                            ) {
+                                Main()
                             }
+                            PermissionWarning(
+                                show = showWarning,
+                                onRequestPermission = {
+                                    showWarning = false
+                                    requestPermission(permissionLauncher)
+                                }
+                            )
                         }
                     }
                 }
             }
         }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        playback.restart()
     }
 
     @Composable

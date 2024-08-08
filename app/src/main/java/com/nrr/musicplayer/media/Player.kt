@@ -14,13 +14,15 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
-class Playback(
+class Player(
     private val mediaController: MediaController?,
+    private val initialPlaybackItem: PlaybackItem = PlaybackItem(),
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) : Player.Listener {
-    val playbackItem = PlaybackItem()
+    val playbackItem = initialPlaybackItem
 
-    init {
+    fun listen() {
+        mediaController?.addListener(this)
         listenCurrentPosition()
     }
 
@@ -31,7 +33,7 @@ class Playback(
                     val currentPosition = mediaController.currentPosition
                     if (currentPosition != 0L) {
                         playbackItem.playbackProgress.value =
-                            TimeUnit.MILLISECONDS.toSeconds(mediaController.currentPosition) / playbackItem.data.value.duration.toFloat()
+                            TimeUnit.MILLISECONDS.toSeconds(currentPosition) / playbackItem.data.value.duration.toFloat()
                         Log.d(playbackItem.playbackProgress.value.toString())
                     }
                 }

@@ -72,7 +72,7 @@ fun SlidingText(
     var offsetX by remember {
         mutableFloatStateOf(0f)
     }
-    var textLength by remember() {
+    var textLength by remember {
         mutableFloatStateOf(0f)
     }
     val state = rememberLazyListState()
@@ -101,6 +101,10 @@ fun SlidingText(
         if (pause) {
             pause = false
         }
+    }
+    LaunchedEffect(text) {
+        state.scrollBy(-offsetX)
+        offsetX = 0f
     }
     BoxWithConstraints(modifier.fillMaxSize()) {
         val space = maxWidth / 2
