@@ -16,8 +16,8 @@ data class AudioFile(
 
 @OptIn(UnstableApi::class)
 fun MediaItem?.toAudioFile(): AudioFile = AudioFile(
-    displayName = this?.mediaMetadata?.title.toString(),
+    displayName = this?.mediaMetadata?.title?.toString() ?: "",
     duration = this?.mediaMetadata?.durationMs?.toInt() ?: 0,
-    album = this?.mediaMetadata?.albumTitle.toString(),
+    album = this?.mediaMetadata?.albumTitle?.toString() ?: "",
     data = this?.localConfiguration?.uri?.toString() ?: ""
 )

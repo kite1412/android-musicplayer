@@ -68,13 +68,12 @@ import com.nrr.musicplayer.LocalPermissionGranted
 import com.nrr.musicplayer.LocalPlayer
 import com.nrr.musicplayer.R
 import com.nrr.musicplayer.model.FormattedAudioFile
-import com.nrr.musicplayer.model.playing
+import com.nrr.musicplayer.model.noData
 import com.nrr.musicplayer.ui.theme.SoftSilver
 import com.nrr.musicplayer.ui.theme.WarmCharcoal
 import com.nrr.musicplayer.util.ScrollConnection
 import com.nrr.musicplayer.util.sharedViewModel
 import com.nrr.musicplayer.view_model.MainViewModel
-import com.nrr.musicplayer.view_model.SharedViewModel
 
 private val playBarPadding = 16.dp
 private val playBarHeight = 70.dp
@@ -151,7 +150,6 @@ fun Main(
         ) {
             Songs(
                 files = sharedViewModel.audioFiles,
-                sharedViewModel = sharedViewModel,
                 modifier = Modifier.fillMaxSize(),
                 state = state,
                 contentPadding = PaddingValues(
@@ -172,15 +170,14 @@ fun Main(
                 titleAlpha = titleAlpha
             ) { minHeaderHeight = it + statusBarHeight }
         }
-        val playbackListener = LocalPlayer.current
-        val playing = playbackListener.playbackItem.playing()
+        val playback by LocalPlayer.current.playbackItem.data
         AnimatedVisibility(
-            visible = vm.animate && !vm.closePlayBar && playing,
+            visible = vm.animate && !playback.noData(),
             modifier = Modifier.align(Alignment.BottomCenter),
             enter = slideInVertically { it / 2 },
             exit = slideOutVertically { it },
         ) {
-            PlayBar(vm, sharedViewModel)
+            PlayBar()
         }
     }
 }
@@ -286,8 +283,6 @@ private fun Menu(
 
 @Composable
 private fun PlayBar(
-    vm: MainViewModel,
-    sharedViewModel: SharedViewModel,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(
@@ -305,7 +300,7 @@ private fun PlayBar(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            val playback = LocalPlayer.current
+            val player = LocalPlayer.current
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -322,17 +317,17 @@ private fun PlayBar(
                         backgroundColor = Color.White,
                         tint = Color.Black
                     )
-                    SlidingText(text = playback.playbackItem.data.value.displayName)
+                    SlidingText(text = player.playbackItem.data.value.displayName)
                 }
                 PlayBarActions(
-                    playing = vm.playing,
-                    onStateChange = { vm.playing = it },
-                    onClose = { vm.closePlayBar = true },
+                    playing = player.playbackItem.isPlaying.value,
+                    onStateChange = { player.playPause(it) },
+                    onClose = { player.clear() },
                     modifier = Modifier.weight(0.2f)
                 )
             }
             LinearProgressIndicator(
-                progress = { playback.playbackItem.playbackProgress.value },
+                progress = { player.playbackItem.playbackProgress.value },
                 modifier = Modifier
                     .width(this@BoxWithConstraints.maxWidth * 0.8f)
                     .fillMaxHeight()
@@ -391,7 +386,6 @@ private fun PlayBarActions(
 @Composable
 private fun Songs(
     files: List<FormattedAudioFile>,
-    sharedViewModel: SharedViewModel,
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues(
@@ -399,7 +393,7 @@ private fun Songs(
         vertical = 0.dp
     ),
 ) {
-    val playback = LocalPlayer.current
+    val player = LocalPlayer.current
     if (files.isNotEmpty()) LazyColumn(
         modifier = modifier,
         state = state,
@@ -410,7 +404,7 @@ private fun Songs(
             Song(
                 file = files[it],
                 modifier = Modifier.clickable {
-                    playback.play(it, files)
+                    player.play(it, files)
                 }
             )
         }

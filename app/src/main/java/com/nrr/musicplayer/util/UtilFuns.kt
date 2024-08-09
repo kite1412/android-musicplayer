@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nrr.musicplayer.view_model.SharedViewModel
+import java.util.concurrent.TimeUnit
 
 inline fun <reified T> minApiLevel(
     minApiLevel: Int,
@@ -19,3 +20,5 @@ fun sharedViewModel(): SharedViewModel = viewModel(
     modelClass = SharedViewModel::class,
     viewModelStoreOwner = LocalContext.current as ComponentActivity
 )
+
+fun msToSec(ms: Int): Int = TimeUnit.MILLISECONDS.toSeconds(ms.toLong()).toInt()

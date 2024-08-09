@@ -66,8 +66,10 @@ val LocalPlayer = compositionLocalOf { Player(null) }
 class MainActivity : ComponentActivity() {
     private var mediaController: MediaController? by mutableStateOf(null)
     private var player: Player by mutableStateOf(Player(null))
-    private val playbackItemData = "playback_item_data"
+    private val playbackData = "playback_item_data"
     private val playbackTimeProgress = "playback_item_progress"
+    private val playbackState = "playback_item_state"
+    private val playbackIndex = "playback_item_index"
 
     @SuppressLint("ComposableNaming")
     @Composable
@@ -153,8 +155,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putParcelable(playbackItemData, player.playbackItem.data.value)
-        outState.putFloat(playbackTimeProgress, player.playbackItem.playbackProgress.value)
+        PlaybackItemSaver(player, outState)
     }
 
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -172,17 +173,7 @@ class MainActivity : ComponentActivity() {
                         mediaController = get().apply {
                             player = Player(
                                 mediaController = this,
-                                initialPlaybackItem = if (savedInstanceState != null)
-                                    PlaybackItem(
-                                        data = mutableStateOf(
-                                            minApiLevel(
-                                                minApiLevel = Build.VERSION_CODES.TIRAMISU,
-                                                onApiLevelRange = { savedInstanceState.getParcelable(playbackItemData, FormattedAudioFile::class.java) },
-                                                onApiLevelBelow = { savedInstanceState.getParcelable(playbackItemData) }
-                                            ) ?: FormattedAudioFile()
-                                        ),
-                                        playbackProgress = mutableFloatStateOf(savedInstanceState.getFloat(playbackTimeProgress))
-                                    ) else PlaybackItem()
+                                initialPlaybackItem = RestorePlaybackItem(savedInstanceState)()
                             )
                             player.listen()
                             addListener(this@MainActivity.player)
@@ -271,5 +262,30 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private inner class PlaybackItemSaver(player: Player, bundle: Bundle) {
+        init {
+            bundle.putParcelable(playbackData, player.playbackItem.data.value)
+            bundle.putFloat(playbackTimeProgress, player.playbackItem.playbackProgress.value)
+            bundle.putBoolean(playbackState, player.playbackItem.isPlaying.value)
+            bundle.putInt(playbackIndex, player.playbackItem.index)
+        }
+    }
+
+    private inner class RestorePlaybackItem(private val savedInstanceState: Bundle?) {
+        operator fun invoke(): PlaybackItem = if (savedInstanceState != null)
+            PlaybackItem(
+                data = mutableStateOf(
+                    minApiLevel(
+                        minApiLevel = Build.VERSION_CODES.TIRAMISU,
+                        onApiLevelRange = { savedInstanceState.getParcelable(playbackData, FormattedAudioFile::class.java) },
+                        onApiLevelBelow = { savedInstanceState.getParcelable(playbackData) }
+                    ) ?: FormattedAudioFile()
+                ),
+                playbackProgress = mutableFloatStateOf(savedInstanceState.getFloat(playbackTimeProgress)),
+                isPlaying = mutableStateOf(savedInstanceState.getBoolean(playbackState)),
+                index = savedInstanceState.getInt(playbackIndex)
+            ) else PlaybackItem()
     }
 }

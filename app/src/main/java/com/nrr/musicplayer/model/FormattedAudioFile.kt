@@ -5,6 +5,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.util.UnstableApi
+import com.nrr.musicplayer.util.msToSec
 import kotlinx.parcelize.Parcelize
 import java.util.concurrent.TimeUnit
 
@@ -16,8 +17,6 @@ data class FormattedAudioFile(
     val raw: AudioFile = AudioFile()
 ) : Parcelable {
     companion object {
-        private fun msToSec(ms: Int): Int = TimeUnit.MILLISECONDS.toSeconds(ms.toLong()).toInt()
-
         private fun from(raw: AudioFile): FormattedAudioFile {
             val seconds = msToSec(raw.duration)
             val minutes = seconds / 60
@@ -36,7 +35,7 @@ data class FormattedAudioFile(
         @OptIn(UnstableApi::class)
         fun from(mediaItem: MediaItem?): FormattedAudioFile {
             return FormattedAudioFile(
-                displayName = mediaItem?.mediaMetadata?.title.toString(),
+                displayName = mediaItem?.mediaMetadata?.title?.toString() ?: "",
                 duration = msToSec(mediaItem?.mediaMetadata?.durationMs?.toInt() ?: 0),
                 raw = mediaItem.toAudioFile()
             )
