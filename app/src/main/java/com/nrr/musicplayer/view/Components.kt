@@ -6,13 +6,12 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nrr.musicplayer.R
@@ -61,7 +61,8 @@ fun MusicNoteIcon(
 @Composable
 fun SlidingText(
     text: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    style: TextStyle = LocalTextStyle.current
 ) {
     var isOverflow by remember(text) {
         mutableStateOf(false)
@@ -106,10 +107,9 @@ fun SlidingText(
         state.scrollBy(-offsetX)
         offsetX = 0f
     }
-    BoxWithConstraints(modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier) {
         val space = maxWidth / 2
         LazyRow(
-            modifier = Modifier.fillMaxWidth(),
             state = state,
             horizontalArrangement = Arrangement.spacedBy(space),
             userScrollEnabled = false
@@ -119,6 +119,7 @@ fun SlidingText(
                     text = text,
                     maxLines = 1,
                     color = Color.White,
+                    style = style,
                     onTextLayout = {
                         with(density) {
                             val width = it.size.width
@@ -134,6 +135,7 @@ fun SlidingText(
                 Text(
                     text = text,
                     maxLines = 1,
+                    style = style,
                     color = Color.White
                 )
             }

@@ -22,6 +22,7 @@ class Player(
 ) : Player.Listener {
     val playbackItem = initialPlaybackItem
     private var files = listOf<FormattedAudioFile>()
+    private var prevProgress = 0f
 
     fun listen() {
         mediaController?.addListener(this)
@@ -33,9 +34,10 @@ class Player(
             while (true) {
                 val currentPosition = mediaController!!.currentPosition
                 if (currentPosition != 0L) {
-                    playbackItem.playbackProgress.value =
-                        TimeUnit.MILLISECONDS.toSeconds(currentPosition) / playbackItem.data.value.duration.toFloat()
-                    Log.d(playbackItem.playbackProgress.value.toString())
+                    val progress = TimeUnit.MILLISECONDS.toSeconds(currentPosition) / playbackItem.data.value.duration.toFloat()
+                    playbackItem.playbackProgress.value = progress
+                    prevProgress = progress
+                    Log.d(progress.toString())
                 }
                 Log.d("listenCurrentPosition")
                 delay(1000)
@@ -46,6 +48,10 @@ class Player(
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
         playbackItem.data.value = FormattedAudioFile.from(mediaItem)
         Log.d("onMediaItemTransition: $reason")
+    }
+
+    override fun onIsPlayingChanged(isPlaying: Boolean) {
+        playbackItem.isPlaying.value = isPlaying
     }
 
     fun play(

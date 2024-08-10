@@ -13,8 +13,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -47,6 +48,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.google.common.util.concurrent.MoreExecutors
 import com.nrr.musicplayer.media.Player
 import com.nrr.musicplayer.model.AudioFile
@@ -55,9 +59,11 @@ import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.model.PlaybackItem
 import com.nrr.musicplayer.service.PlaybackService
 import com.nrr.musicplayer.ui.theme.MusicPlayerTheme
+import com.nrr.musicplayer.util.Destination
 import com.nrr.musicplayer.util.Log
 import com.nrr.musicplayer.util.minApiLevel
 import com.nrr.musicplayer.view.Main
+import com.nrr.musicplayer.view.Playback
 
 val LocalAudioFilesLoader = compositionLocalOf<() -> AudioFiles> { { AudioFiles() } }
 val LocalPermissionGranted = compositionLocalOf { false }
@@ -76,7 +82,7 @@ class MainActivity : ComponentActivity() {
     private fun adjustSystemBars() {
         WindowCompat.getInsetsController(window, window.decorView).apply {
             window.navigationBarColor = MaterialTheme.colorScheme.background.toArgb()
-            isAppearanceLightStatusBars = isSystemInDarkTheme()
+            isAppearanceLightStatusBars = true
         }
     }
 
@@ -212,7 +218,20 @@ class MainActivity : ComponentActivity() {
                                     .windowInsetsPadding(WindowInsets.navigationBars)
                                     .consumeWindowInsets(WindowInsets.navigationBars)
                             ) {
-                                Main()
+                                val controller = rememberNavController()
+                                NavHost(
+                                    navController = controller,
+                                    startDestination = Destination.Main()
+                                ) {
+                                    composable(Destination.Main()) { Main(controller) }
+                                    composable(
+                                        route = Destination.Playback(),
+                                        enterTransition = { slideInVertically { it } },
+                                        exitTransition = { slideOutVertically { it } }
+                                    ) {
+                                        Playback(controller)
+                                    }
+                                }
                             }
                             PermissionWarning(
                                 show = showWarning,

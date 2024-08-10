@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import com.nrr.musicplayer.LocalAudioFilesLoader
 import com.nrr.musicplayer.LocalPermissionGranted
 import com.nrr.musicplayer.LocalPlayer
@@ -71,6 +72,7 @@ import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.model.noData
 import com.nrr.musicplayer.ui.theme.SoftSilver
 import com.nrr.musicplayer.ui.theme.WarmCharcoal
+import com.nrr.musicplayer.util.Destination
 import com.nrr.musicplayer.util.ScrollConnection
 import com.nrr.musicplayer.util.sharedViewModel
 import com.nrr.musicplayer.view_model.MainViewModel
@@ -80,6 +82,7 @@ private val playBarHeight = 70.dp
 
 @Composable
 fun Main(
+    navHostController: NavHostController,
     modifier: Modifier = Modifier,
     vm: MainViewModel = viewModel(MainViewModel::class)
 ) {
@@ -177,7 +180,9 @@ fun Main(
             enter = slideInVertically { it / 2 },
             exit = slideOutVertically { it },
         ) {
-            PlayBar()
+            PlayBar {
+                navHostController.navigate(Destination.Playback())
+            }
         }
     }
 }
@@ -281,15 +286,22 @@ private fun Menu(
     )
 }
 
+@SuppressLint("UnrememberedMutableInteractionSource")
 @Composable
 private fun PlayBar(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
     BoxWithConstraints(
         modifier = modifier
             .padding(playBarPadding)
             .height(playBarHeight)
             .fillMaxWidth()
+            .clickable(
+                indication = null,
+                interactionSource = MutableInteractionSource(),
+                onClick = onClick
+            )
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.onBackground)
     ) {
@@ -389,8 +401,7 @@ private fun Songs(
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues(
-        horizontal = 8.dp,
-        vertical = 0.dp
+        horizontal = 8.dp
     ),
 ) {
     val player = LocalPlayer.current
