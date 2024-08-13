@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,14 +49,20 @@ import com.nrr.musicplayer.ui.theme.WarmCharcoal
 import com.nrr.musicplayer.util.RepeatState
 import com.nrr.musicplayer.view_model.PlaybackViewModel
 
+@Composable
+private fun playbackViewModel(): PlaybackViewModel = LocalContext.current.run {
+    viewModel { PlaybackViewModel(this@run) }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun Playback(
     navHostController: NavHostController,
     modifier: Modifier = Modifier,
-    vm: PlaybackViewModel = viewModel(PlaybackViewModel::class)
+    vm: PlaybackViewModel = playbackViewModel()
 ) {
     val player = LocalPlayer.current
+    val context = LocalContext.current
     VerticalPager(
         state = rememberPagerState { 2 },
         modifier = modifier
@@ -68,7 +75,9 @@ fun Playback(
             0 -> PlaybackControl(
                 sliderProgress = player.playbackItem.playbackProgress.value,
                 onProgressChange = { p -> vm.onProgressChange(p, player) },
-                onProgressChangeFinished = { vm.onProgressChangeFinished(player) }
+                onProgressChangeFinished = { vm.onProgressChangeFinished(player) },
+                repeatState = vm.repeatState,
+                onRepeatStateChange = { vm.onRepeatStateChange(context) }
             ) {
                 navHostController.popBackStack()
             }
@@ -103,6 +112,8 @@ private fun Header(
 private fun PlaybackControl(
     sliderProgress: Float,
     onProgressChange: (Float) -> Unit,
+    repeatState: RepeatState,
+    onRepeatStateChange: () -> Unit,
     modifier: Modifier = Modifier,
     onProgressChangeFinished: (() -> Unit)? = null,
     onNavigateBack: () -> Unit
@@ -137,8 +148,9 @@ private fun PlaybackControl(
                     progress = sliderProgress,
                     onProgressChange = onProgressChange,
                     shuffle = true,
-                    repeatState = RepeatState.ON,
-                    onProgressChangeFinished = onProgressChangeFinished
+                    repeatState = repeatState,
+                    onProgressChangeFinished = onProgressChangeFinished,
+                    onRepeatStateChange = onRepeatStateChange
                 )
             }
         }
@@ -180,6 +192,7 @@ private fun Control(
     onProgressChange: (Float) -> Unit,
     shuffle: Boolean,
     repeatState: RepeatState,
+    onRepeatStateChange: () -> Unit,
     modifier: Modifier = Modifier,
     onProgressChangeFinished: (() -> Unit)? = null
 ) {
@@ -203,10 +216,9 @@ private fun Control(
                     RepeatState.CURRENT -> "repeat current song"
                     RepeatState.ON -> "repeat queue"
                     RepeatState.OFF -> "repeat off"
-                }
-            ) {
-
-            }
+                },
+                onClick = onRepeatStateChange
+            )
             ControlAction(
                 painterResId = R.drawable.shuffle,
                 contentDescription = "shuffle",

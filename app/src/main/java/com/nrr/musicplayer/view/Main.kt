@@ -206,7 +206,7 @@ private fun Header(
                     bottomEnd = 24.dp,
                 )
             )
-            .background(MaterialTheme.colorScheme.onBackground)
+            .background(WarmCharcoal)
     ) {
         val density = LocalDensity.current
         var titleBottomPadding by remember {
@@ -304,7 +304,7 @@ private fun PlayBar(
                 onClick = onClick
             )
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.onBackground)
+            .background(WarmCharcoal)
     ) {
         Column(
             modifier = Modifier

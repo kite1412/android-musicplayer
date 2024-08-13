@@ -72,10 +72,6 @@ val Context.dataStore by preferencesDataStore("settings")
 class MainActivity : ComponentActivity() {
     private var mediaController: MediaController? by mutableStateOf(null)
     private var player: Player by mutableStateOf(Player(null))
-    private val playbackData = "playback_item_data"
-    private val playbackTimeProgress = "playback_item_progress"
-    private val playbackState = "playback_item_state"
-    private val playbackIndex = "playback_item_index"
 
     @SuppressLint("ComposableNaming")
     @Composable
