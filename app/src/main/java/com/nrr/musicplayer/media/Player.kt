@@ -6,14 +6,14 @@ import androidx.media3.session.MediaController
 import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.model.PlaybackItem
 import com.nrr.musicplayer.util.Log
-import com.nrr.musicplayer.util.msToSec
+import com.nrr.musicplayer.util.msToFloatProgress
 import com.nrr.musicplayer.util.playMedia
+import com.nrr.musicplayer.util.progressToMs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.concurrent.TimeUnit
 
 class Player(
     private val mediaController: MediaController?,
@@ -23,6 +23,7 @@ class Player(
     val playbackItem = initialPlaybackItem
     private var files = listOf<FormattedAudioFile>()
     private var prevProgress = 0f
+    private var listenCurrentPosition = true
 
     fun listen() {
         mediaController?.addListener(this)
@@ -33,8 +34,8 @@ class Player(
         scope.launch {
             while (true) {
                 val currentPosition = mediaController!!.currentPosition
-                if (currentPosition != 0L) {
-                    val progress = TimeUnit.MILLISECONDS.toSeconds(currentPosition) / playbackItem.data.value.duration.toFloat()
+                if (currentPosition != 0L && listenCurrentPosition) {
+                    val progress = msToFloatProgress(currentPosition.toInt(), playbackItem.data.value.duration)
                     playbackItem.playbackProgress.value = progress
                     prevProgress = progress
                     Log.d(progress.toString())
@@ -62,7 +63,7 @@ class Player(
         val file = files[startIndex]
         playbackItem.data.value = file
         playbackItem.isPlaying.value = true
-        playbackItem.playbackProgress.value = msToSec(startPosition.toInt()) / file.duration.toFloat()
+        playbackItem.playbackProgress.value = msToFloatProgress(startPosition.toInt(), file.duration)
         playbackItem.index = startIndex
         this.files = files
         mediaController?.playMedia(startIndex, files, startPosition)
@@ -90,5 +91,18 @@ class Player(
 
     fun restart() {
         scope.cancel()
+    }
+
+    fun setTemporaryProgress(progress: Float) {
+        listenCurrentPosition = false
+        playbackItem.playbackProgress.value = progress
+    }
+
+    fun seek(progress: Float) {
+        mediaController?.seekTo(progressToMs(
+            progress = progress,
+            duration = playbackItem.data.value.raw.duration
+        ).toLong())
+        listenCurrentPosition = true
     }
 }

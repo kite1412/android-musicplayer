@@ -37,6 +37,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -329,7 +330,12 @@ private fun PlayBar(
                         backgroundColor = Color.White,
                         tint = Color.Black
                     )
-                    SlidingText(text = player.playbackItem.data.value.displayName)
+                    SlidingText(
+                        text = player.playbackItem.data.value.displayName,
+                        style = LocalTextStyle.current.copy(
+                            color = Color.White
+                        )
+                    )
                 }
                 PlayBarActions(
                     playing = player.playbackItem.isPlaying.value,

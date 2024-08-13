@@ -2,6 +2,7 @@ package com.nrr.musicplayer.util
 
 import android.os.Build
 import androidx.activity.ComponentActivity
+import androidx.annotation.FloatRange
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -22,3 +23,10 @@ fun sharedViewModel(): SharedViewModel = viewModel(
 )
 
 fun msToSec(ms: Int): Int = TimeUnit.MILLISECONDS.toSeconds(ms.toLong()).toInt()
+
+fun msToFloatProgress(ms: Int, duration: Int): Float = msToSec(ms) / duration.toFloat()
+
+fun progressToMs(
+    @FloatRange(from = 0.0, to = 1.0) progress: Float,
+    duration: Int
+): Int = (progress * duration).toInt()

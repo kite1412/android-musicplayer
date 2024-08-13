@@ -118,7 +118,6 @@ fun SlidingText(
                 Text(
                     text = text,
                     maxLines = 1,
-                    color = Color.White,
                     style = style,
                     onTextLayout = {
                         with(density) {
@@ -135,8 +134,7 @@ fun SlidingText(
                 Text(
                     text = text,
                     maxLines = 1,
-                    style = style,
-                    color = Color.White
+                    style = style
                 )
             }
         }
