@@ -3,6 +3,7 @@ package com.nrr.musicplayer
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ComponentName
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -34,7 +35,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import androidx.navigation.compose.NavHost
@@ -55,8 +56,6 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.nrr.musicplayer.media.Player
 import com.nrr.musicplayer.model.AudioFile
 import com.nrr.musicplayer.model.AudioFiles
-import com.nrr.musicplayer.model.FormattedAudioFile
-import com.nrr.musicplayer.model.PlaybackItem
 import com.nrr.musicplayer.service.PlaybackService
 import com.nrr.musicplayer.ui.theme.MusicPlayerTheme
 import com.nrr.musicplayer.util.Destination
@@ -68,6 +67,7 @@ import com.nrr.musicplayer.view.Playback
 val LocalAudioFilesLoader = compositionLocalOf<() -> AudioFiles> { { AudioFiles() } }
 val LocalPermissionGranted = compositionLocalOf { false }
 val LocalPlayer = compositionLocalOf { Player(null) }
+val Context.dataStore by preferencesDataStore("settings")
 
 class MainActivity : ComponentActivity() {
     private var mediaController: MediaController? by mutableStateOf(null)
@@ -150,7 +150,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { App(savedInstanceState = savedInstanceState) }
+        setContent { App() }
     }
 
     override fun onDestroy() {
@@ -159,14 +159,9 @@ class MainActivity : ComponentActivity() {
         player.restart()
     }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        PlaybackItemSaver(player, outState)
-    }
-
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @Composable
-    private fun App(savedInstanceState: Bundle?) {
+    private fun App() {
         LaunchedEffect(true) {
             val token = SessionToken(
                 this@MainActivity,
@@ -177,10 +172,7 @@ class MainActivity : ComponentActivity() {
                     {
                         mediaController?.removeListener(player)
                         mediaController = get().apply {
-                            player = Player(
-                                mediaController = this,
-                                initialPlaybackItem = RestorePlaybackItem(savedInstanceState)()
-                            )
+                            player = Player.create(this)
                             player.listen()
                             addListener(this@MainActivity.player)
                         }
@@ -281,30 +273,5 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    private inner class PlaybackItemSaver(player: Player, bundle: Bundle) {
-        init {
-            bundle.putParcelable(playbackData, player.playbackItem.data.value)
-            bundle.putFloat(playbackTimeProgress, player.playbackItem.playbackProgress.value)
-            bundle.putBoolean(playbackState, player.playbackItem.isPlaying.value)
-            bundle.putInt(playbackIndex, player.playbackItem.index)
-        }
-    }
-
-    private inner class RestorePlaybackItem(private val savedInstanceState: Bundle?) {
-        operator fun invoke(): PlaybackItem = if (savedInstanceState != null)
-            PlaybackItem(
-                data = mutableStateOf(
-                    minApiLevel(
-                        minApiLevel = Build.VERSION_CODES.TIRAMISU,
-                        onApiLevelRange = { savedInstanceState.getParcelable(playbackData, FormattedAudioFile::class.java) },
-                        onApiLevelBelow = { savedInstanceState.getParcelable(playbackData) }
-                    ) ?: FormattedAudioFile()
-                ),
-                playbackProgress = mutableFloatStateOf(savedInstanceState.getFloat(playbackTimeProgress)),
-                isPlaying = mutableStateOf(savedInstanceState.getBoolean(playbackState)),
-                index = savedInstanceState.getInt(playbackIndex)
-            ) else PlaybackItem()
     }
 }

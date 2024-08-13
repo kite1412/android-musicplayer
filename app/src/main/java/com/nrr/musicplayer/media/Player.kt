@@ -1,7 +1,6 @@
 package com.nrr.musicplayer.media
 
 import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.model.PlaybackItem
@@ -14,16 +13,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.media3.common.Player as player
 
 class Player(
     private val mediaController: MediaController?,
     initialPlaybackItem: PlaybackItem = PlaybackItem(),
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
-) : Player.Listener {
+) : player.Listener {
     val playbackItem = initialPlaybackItem
     private var files = listOf<FormattedAudioFile>()
     private var prevProgress = 0f
     private var listenCurrentPosition = true
+
+    companion object {
+        fun create(mediaController: MediaController?): Player = Player(
+            mediaController = mediaController,
+            initialPlaybackItem = PlaybackItem.create(mediaController)
+        )
+    }
 
     fun listen() {
         mediaController?.addListener(this)
@@ -48,7 +55,6 @@ class Player(
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
         playbackItem.data.value = FormattedAudioFile.from(mediaItem)
-        Log.d("onMediaItemTransition: $reason")
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -101,7 +107,7 @@ class Player(
     fun seek(progress: Float) {
         mediaController?.seekTo(progressToMs(
             progress = progress,
-            duration = playbackItem.data.value.raw.duration
+            durationMs = playbackItem.data.value.raw.duration
         ).toLong())
         listenCurrentPosition = true
     }

@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
@@ -76,7 +76,9 @@ fun SlidingText(
     var textLength by remember {
         mutableFloatStateOf(0f)
     }
-    val state = rememberLazyListState()
+    val state = remember {
+        LazyListState()
+    }
     val density = LocalDensity.current
     LaunchedEffect(isOverflow, pause) {
         delay(2000)

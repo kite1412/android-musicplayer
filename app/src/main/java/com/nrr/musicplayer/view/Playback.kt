@@ -1,5 +1,6 @@
 package com.nrr.musicplayer.view
 
+import androidx.annotation.FloatRange
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +25,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -42,6 +45,7 @@ import com.nrr.musicplayer.LocalPlayer
 import com.nrr.musicplayer.R
 import com.nrr.musicplayer.ui.theme.SoftSilver
 import com.nrr.musicplayer.ui.theme.WarmCharcoal
+import com.nrr.musicplayer.util.RepeatState
 import com.nrr.musicplayer.view_model.PlaybackViewModel
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -129,11 +133,12 @@ private fun PlaybackControl(
                         .align(Alignment.CenterHorizontally)
                         .padding(horizontal = 8.dp)
                 )
-                ProgressSlider(
-                    value = sliderProgress,
-                    onValueChange = onProgressChange,
-                    onValueChangeFinished = onProgressChangeFinished,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                Control(
+                    progress = sliderProgress,
+                    onProgressChange = onProgressChange,
+                    shuffle = true,
+                    repeatState = RepeatState.ON,
+                    onProgressChangeFinished = onProgressChangeFinished
                 )
             }
         }
@@ -159,8 +164,9 @@ private fun MusicTitle(
             contentDescription = "like / undo",
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .size(40.dp)
                 .background(MaterialTheme.colorScheme.background)
+                .padding(start = 8.dp)
+                .size(36.dp)
                 .clip(CircleShape)
                 .clickable { },
             tint = Color(0xFFF30000)
@@ -168,21 +174,90 @@ private fun MusicTitle(
     }
 }
 
+@Composable
+private fun Control(
+    progress: Float,
+    onProgressChange: (Float) -> Unit,
+    shuffle: Boolean,
+    repeatState: RepeatState,
+    modifier: Modifier = Modifier,
+    onProgressChangeFinished: (() -> Unit)? = null
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            ControlAction(
+                painterResId = when(repeatState) {
+                    RepeatState.CURRENT -> R.drawable.repeat_current
+                    RepeatState.ON -> R.drawable.repeat_queue
+                    RepeatState.OFF -> R.drawable.repeat_off
+                },
+                contentDescription = when(repeatState) {
+                    RepeatState.CURRENT -> "repeat current song"
+                    RepeatState.ON -> "repeat queue"
+                    RepeatState.OFF -> "repeat off"
+                }
+            ) {
+
+            }
+            ControlAction(
+                painterResId = R.drawable.shuffle,
+                contentDescription = "shuffle",
+                tint = if (shuffle) LocalContentColor.current else Color.Gray
+            ) {
+
+            }
+        }
+        ProgressSlider(
+            progress = progress,
+            onProgressChange = onProgressChange,
+            modifier = Modifier.fillMaxWidth(),
+            onProgressChangeFinished = onProgressChangeFinished
+        )
+    }
+}
+
+@Composable
+private fun ControlAction(
+    painterResId: Int,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    tint: Color = LocalContentColor.current,
+    onClick: () -> Unit
+) {
+    Icon(
+        painter = painterResource(id = painterResId),
+        contentDescription = contentDescription,
+        modifier = modifier
+            .size(26.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        tint = tint
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProgressSlider(
-    value: Float,
-    onValueChange: (Float) -> Unit,
+    @FloatRange(from = 0.0, to = 1.0) progress: Float,
+    onProgressChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
-    onValueChangeFinished: (() -> Unit)? = null
+    onProgressChangeFinished: (() -> Unit)? = null
 ) {
     val activeColor = if (isSystemInDarkTheme()) SoftSilver else WarmCharcoal
     val inactiveColor = if (isSystemInDarkTheme()) WarmCharcoal else SoftSilver
     Slider(
-        value = value,
-        onValueChange = onValueChange,
+        value = progress,
+        onValueChange = onProgressChange,
         modifier = modifier,
-        onValueChangeFinished = onValueChangeFinished,
+        onValueChangeFinished = onProgressChangeFinished,
         colors = SliderDefaults.colors(
             thumbColor = activeColor,
             activeTrackColor = activeColor,

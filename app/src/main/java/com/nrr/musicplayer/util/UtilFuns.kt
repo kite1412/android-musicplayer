@@ -28,5 +28,5 @@ fun msToFloatProgress(ms: Int, duration: Int): Float = msToSec(ms) / duration.to
 
 fun progressToMs(
     @FloatRange(from = 0.0, to = 1.0) progress: Float,
-    duration: Int
-): Int = (progress * duration).toInt()
+    durationMs: Int
+): Int = (progress * durationMs).toInt()
