@@ -11,7 +11,7 @@ import com.nrr.musicplayer.dataStore
 import com.nrr.musicplayer.data_store.DataStoreKeys
 import com.nrr.musicplayer.media.Player
 import com.nrr.musicplayer.util.RepeatState
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -19,6 +19,7 @@ class PlaybackViewModel(
     context: Context
 ) : ViewModel() {
     var repeatState by mutableStateOf(RepeatState.ON)
+    var shuffle by mutableStateOf(false)
 
     init {
         viewModelScope.launch {
@@ -26,7 +27,10 @@ class PlaybackViewModel(
                 it[DataStoreKeys.REPEAT_STATE]?.let { s ->
                     repeatState = RepeatState.from(s)
                 }
-            }.collect()
+                it[DataStoreKeys.SHUFFLE]?.let { s ->
+                    shuffle = s
+                }
+            }.first()
         }
     }
 
@@ -35,6 +39,15 @@ class PlaybackViewModel(
         viewModelScope.launch {
             context.dataStore.edit {
                 it[DataStoreKeys.REPEAT_STATE] = repeatState.ordinal
+            }
+        }
+    }
+
+    fun onShuffleChange(context: Context) {
+        shuffle = !shuffle
+        viewModelScope.launch {
+            context.dataStore.edit {
+                it[DataStoreKeys.SHUFFLE] = shuffle
             }
         }
     }

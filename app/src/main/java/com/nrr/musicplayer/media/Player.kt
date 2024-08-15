@@ -17,18 +17,18 @@ import androidx.media3.common.Player as player
 
 class Player(
     private val mediaController: MediaController?,
-    initialPlaybackItem: PlaybackItem = PlaybackItem(),
+    val playbackItem: PlaybackItem = PlaybackItem(),
+    private var files: List<FormattedAudioFile> = emptyList(),
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) : player.Listener {
-    val playbackItem = initialPlaybackItem
-    private var files = listOf<FormattedAudioFile>()
     private var prevProgress = 0f
     private var listenCurrentPosition = true
+    private var inTransition = false
 
     companion object {
         fun create(mediaController: MediaController?): Player = Player(
             mediaController = mediaController,
-            initialPlaybackItem = PlaybackItem.create(mediaController)
+            playbackItem = PlaybackItem.create(mediaController)
         )
     }
 
@@ -54,11 +54,15 @@ class Player(
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-        playbackItem.data.value = FormattedAudioFile.from(mediaItem)
+        playbackItem.data.value = FormattedAudioFile.from(mediaItem).also {
+            Log.d("playing: ${it.displayName}")
+        }
+        playbackItem.index = mediaController?.currentMediaItemIndex ?: 0
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
-        playbackItem.isPlaying.value = isPlaying
+        if (inTransition) inTransition = false
+        else playbackItem.isPlaying.value = isPlaying
     }
 
     fun play(
@@ -68,7 +72,7 @@ class Player(
     ) {
         val file = files[startIndex]
         playbackItem.data.value = file
-        playbackItem.isPlaying.value = true
+        if (!playbackItem.isPlaying.value) playbackItem.isPlaying.value = true
         playbackItem.playbackProgress.value = msToFloatProgress(startPosition.toInt(), file.duration)
         playbackItem.index = startIndex
         this.files = files
@@ -110,5 +114,21 @@ class Player(
             durationMs = playbackItem.data.value.raw.duration
         ).toLong())
         listenCurrentPosition = true
+    }
+
+    fun hasNext(): Boolean = mediaController?.hasNextMediaItem() ?: false
+
+    fun hasPrevious(): Boolean = mediaController?.hasPreviousMediaItem() ?: false
+
+    fun next() {
+        playbackItem.playbackProgress.value = 0f
+        inTransition = true
+        mediaController?.seekToNextMediaItem()
+    }
+
+    fun previous() {
+        playbackItem.playbackProgress.value = 0f
+        inTransition = true
+        mediaController?.seekToPreviousMediaItem()
     }
 }

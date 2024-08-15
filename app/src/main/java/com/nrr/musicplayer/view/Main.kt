@@ -107,9 +107,7 @@ fun Main(
     LaunchedEffect(granted) {
         if (!vm.executeOnce && granted) {
             filesLoader().also {
-                sharedViewModel.audioFiles.addAll(
-                    FormattedAudioFile.from(it.audioFiles)
-                )
+                sharedViewModel.addAudioFiles(FormattedAudioFile.from(it.audioFiles))
             }
             vm.executeOnce = true
         }

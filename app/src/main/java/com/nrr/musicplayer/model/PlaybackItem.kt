@@ -28,7 +28,7 @@ data class PlaybackItem(
                     )
                 ),
                 isPlaying = mutableStateOf(mediaController?.isPlaying ?: false),
-                index = mediaController?.nextMediaItemIndex ?: 0
+                index = mediaController?.currentMediaItemIndex ?: 0
             )
     }
 }

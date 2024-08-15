@@ -1,9 +1,12 @@
 package com.nrr.musicplayer.view
 
+import android.annotation.SuppressLint
 import androidx.annotation.FloatRange
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +35,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,7 +81,9 @@ fun Playback(
                 onProgressChange = { p -> vm.onProgressChange(p, player) },
                 onProgressChangeFinished = { vm.onProgressChangeFinished(player) },
                 repeatState = vm.repeatState,
-                onRepeatStateChange = { vm.onRepeatStateChange(context) }
+                onRepeatStateChange = { vm.onRepeatStateChange(context) },
+                shuffle = vm.shuffle,
+                onShuffleChange = { vm.onShuffleChange(context) }
             ) {
                 navHostController.popBackStack()
             }
@@ -108,22 +114,26 @@ private fun Header(
     )
 }
 
+// TODO implement width > height layout
 @Composable
 private fun PlaybackControl(
     sliderProgress: Float,
     onProgressChange: (Float) -> Unit,
     repeatState: RepeatState,
     onRepeatStateChange: () -> Unit,
+    shuffle: Boolean,
+    onShuffleChange: () -> Unit,
     modifier: Modifier = Modifier,
     onProgressChangeFinished: (() -> Unit)? = null,
     onNavigateBack: () -> Unit
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val player = LocalPlayer.current.playbackItem
+            val player = LocalPlayer.current
             Header(onNavigateBack = onNavigateBack)
             Column(
                 modifier = Modifier
@@ -138,20 +148,35 @@ private fun PlaybackControl(
                     clipSize = 16.dp
                 )
                 MusicTitle(
-                    title = player.data.value.displayName,
+                    title = player.playbackItem.data.value.displayName,
                     onLike = {},
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
                         .padding(horizontal = 8.dp)
                 )
-                Control(
-                    progress = sliderProgress,
-                    onProgressChange = onProgressChange,
-                    shuffle = true,
-                    repeatState = repeatState,
-                    onProgressChangeFinished = onProgressChangeFinished,
-                    onRepeatStateChange = onRepeatStateChange
-                )
+                val playing by player.playbackItem.isPlaying
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 32.dp),
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    Control(
+                        progress = sliderProgress,
+                        onProgressChange = onProgressChange,
+                        repeatState = repeatState,
+                        onRepeatStateChange = onRepeatStateChange,
+                        shuffle = shuffle,
+                        onShuffleChange = onShuffleChange,
+                        playing = playing,
+                        onPlayPause = { player.playPause(!playing) },
+                        nextEnabled = player.hasNext(),
+                        previousEnabled = player.hasPrevious(),
+                        onNext = { player.next() },
+                        onPrevious = { player.previous() },
+                        onProgressChangeFinished = onProgressChangeFinished
+                    )
+                }
             }
         }
     }
@@ -190,9 +215,16 @@ private fun MusicTitle(
 private fun Control(
     progress: Float,
     onProgressChange: (Float) -> Unit,
-    shuffle: Boolean,
     repeatState: RepeatState,
     onRepeatStateChange: () -> Unit,
+    shuffle: Boolean,
+    onShuffleChange: () -> Unit,
+    playing: Boolean,
+    onPlayPause: (Boolean) -> Unit,
+    nextEnabled: Boolean,
+    previousEnabled: Boolean,
+    onNext: () -> Unit,
+    onPrevious: () -> Unit,
     modifier: Modifier = Modifier,
     onProgressChangeFinished: (() -> Unit)? = null
 ) {
@@ -222,16 +254,23 @@ private fun Control(
             ControlAction(
                 painterResId = R.drawable.shuffle,
                 contentDescription = "shuffle",
-                tint = if (shuffle) LocalContentColor.current else Color.Gray
-            ) {
-
-            }
+                tint = if (shuffle) LocalContentColor.current else Color.Gray,
+                onClick = onShuffleChange
+            )
         }
         ProgressSlider(
             progress = progress,
             onProgressChange = onProgressChange,
             modifier = Modifier.fillMaxWidth(),
             onProgressChangeFinished = onProgressChangeFinished
+        )
+        PlaybackState(
+            playing = playing,
+            onPlayPause = onPlayPause,
+            nextEnabled = nextEnabled,
+            previousEnabled = previousEnabled,
+            onNext = onNext,
+            onPrevious = onPrevious
         )
     }
 }
@@ -284,5 +323,74 @@ private fun ProgressSlider(
                     .background(activeColor)
             )
         }
+    )
+}
+
+@SuppressLint("UnrememberedMutableInteractionSource")
+@Composable
+private fun PlaybackState(
+    playing: Boolean,
+    onPlayPause: (Boolean) -> Unit,
+    nextEnabled: Boolean,
+    previousEnabled: Boolean,
+    onNext: () -> Unit,
+    onPrevious: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceAround,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        NavigateButton(
+            painterResId = R.drawable.previous,
+            contentDescription = "previous",
+            enabled = previousEnabled,
+            onClick = onPrevious
+        )
+        AnimatedContent(targetState = playing, label = "play_pause") {
+            Icon(
+                painter = painterResource(
+                    id = if (it) R.drawable.pause_filled else R.drawable.play_filled
+                ),
+                contentDescription = "previous",
+                modifier = Modifier
+                    .size(60.dp)
+                    .clickable(
+                        indication = null,
+                        interactionSource = MutableInteractionSource(),
+                        onClick = { onPlayPause(!playing) }
+                    )
+            )
+        }
+        NavigateButton(
+            painterResId = R.drawable.next,
+            contentDescription = "next",
+            enabled = nextEnabled,
+            onClick = onNext
+        )
+    }
+}
+
+@SuppressLint("UnrememberedMutableInteractionSource")
+@Composable
+private fun NavigateButton(
+    painterResId: Int,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Icon(
+        painter = painterResource(id = painterResId),
+        contentDescription = contentDescription,
+        modifier = modifier
+            .size(32.dp)
+            .clickable(
+                indication = null,
+                interactionSource = MutableInteractionSource(),
+                onClick = onClick,
+                enabled = enabled
+            )
     )
 }
