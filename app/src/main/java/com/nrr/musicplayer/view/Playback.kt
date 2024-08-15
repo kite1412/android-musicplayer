@@ -384,6 +384,7 @@ private fun NavigateButton(
     Icon(
         painter = painterResource(id = painterResId),
         contentDescription = contentDescription,
+        tint = if (enabled) LocalContentColor.current else Color.Gray,
         modifier = modifier
             .size(32.dp)
             .clickable(

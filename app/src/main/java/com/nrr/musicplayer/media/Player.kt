@@ -26,9 +26,20 @@ class Player(
     private var inTransition = false
 
     companion object {
+        private fun resolveFiles(mediaController: MediaController?): List<FormattedAudioFile> {
+            val mediaItems = mutableListOf<MediaItem?>()
+            var index = 0
+            while (index < (mediaController?.mediaItemCount ?: 0)) {
+                mediaItems.add(mediaController?.getMediaItemAt(index))
+                index++
+            }
+            return mediaItems.map { FormattedAudioFile.from(it) }
+        }
+
         fun create(mediaController: MediaController?): Player = Player(
             mediaController = mediaController,
-            playbackItem = PlaybackItem.create(mediaController)
+            playbackItem = PlaybackItem.create(mediaController),
+            files = resolveFiles(mediaController)
         )
     }
 
@@ -70,6 +81,7 @@ class Player(
         files: List<FormattedAudioFile>,
         startPosition: Long = 0L
     ) {
+        if (files.isEmpty()) return
         val file = files[startIndex]
         playbackItem.data.value = file
         if (!playbackItem.isPlaying.value) playbackItem.isPlaying.value = true
@@ -109,6 +121,7 @@ class Player(
     }
 
     fun seek(progress: Float) {
+        inTransition = true
         mediaController?.seekTo(progressToMs(
             progress = progress,
             durationMs = playbackItem.data.value.raw.duration
