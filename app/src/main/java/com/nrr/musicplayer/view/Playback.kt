@@ -3,6 +3,11 @@ package com.nrr.musicplayer.view
 import android.annotation.SuppressLint
 import androidx.annotation.FloatRange
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,9 +26,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -35,10 +43,15 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -48,15 +61,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.nrr.musicplayer.LocalPlayer
 import com.nrr.musicplayer.R
+import com.nrr.musicplayer.ui.theme.DeeperCharcoal
 import com.nrr.musicplayer.ui.theme.SoftSilver
 import com.nrr.musicplayer.ui.theme.WarmCharcoal
 import com.nrr.musicplayer.util.RepeatState
 import com.nrr.musicplayer.view_model.PlaybackViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 private fun playbackViewModel(): PlaybackViewModel = LocalContext.current.run {
     viewModel { PlaybackViewModel(this@run) }
 }
+
+private fun playlistBackgroundColor(isDarkMode: Boolean): Color =
+    if (isDarkMode) DeeperCharcoal else Color(0xFFE9E9E9)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -67,27 +85,100 @@ fun Playback(
 ) {
     val player = LocalPlayer.current
     val context = LocalContext.current
-    VerticalPager(
-        state = rememberPagerState { 2 },
+    val pagerState = rememberPagerState { 2 }
+    val currentPage by remember {
+        derivedStateOf { pagerState.currentPage }
+    }
+    val isDarkMode = isSystemInDarkTheme()
+    val playbackControlClip by animateDpAsState(
+        targetValue = if (currentPage == 1) 16.dp else 0.dp,
+        label = "playback_control_clip"
+    )
+    val scope = rememberCoroutineScope()
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.systemBars)
-            .consumeWindowInsets(WindowInsets.systemBars),
-        userScrollEnabled = false
+            .consumeWindowInsets(WindowInsets.systemBars)
     ) {
-        when (it) {
-            0 -> PlaybackControl(
-                sliderProgress = player.playbackItem.playbackProgress.value,
-                onProgressChange = { p -> vm.onProgressChange(p, player) },
-                onProgressChangeFinished = { vm.onProgressChangeFinished(player) },
-                repeatState = vm.repeatState,
-                onRepeatStateChange = { vm.onRepeatStateChange(context) },
-                shuffle = vm.shuffle,
-                onShuffleChange = { vm.onShuffleChange(context) }
-            ) {
-                navHostController.popBackStack()
+        val pageSize by remember {
+            derivedStateOf {
+                if (currentPage == 0) maxHeight
+                else maxHeight * 0.9f
             }
-            1 -> Text(text = "Empty")
+        }
+        VerticalPager(
+            state = pagerState,
+            pageSize = PageSize.Fixed(pageSize),
+            userScrollEnabled = currentPage == 0
+        ) {
+            when (it) {
+                0 -> Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(playlistBackgroundColor(isDarkMode))
+                        .clip(
+                            RoundedCornerShape(
+                                bottomStart = playbackControlClip,
+                                bottomEnd = playbackControlClip
+                            )
+                        )
+                        .background(MaterialTheme.colorScheme.background)
+                        .shadow(
+                            elevation = if (currentPage == 1) 2.dp else 0.dp,
+                            shape = RoundedCornerShape(
+                                bottomStart = playbackControlClip,
+                                bottomEnd = playbackControlClip
+                            ),
+                            spotColor = if (isDarkMode) Color.White else Color.Black
+                        )
+                        .padding(bottom = 8.dp),
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    AnimatedVisibility(
+                        visible = currentPage == 0,
+                        modifier =  Modifier
+                            .weight(0.9f),
+                        label = "playback_control",
+                        enter = slideInVertically { h -> -h / 5 },
+                        exit = slideOutVertically { h -> -h }
+                    ) {
+                        PlaybackControl(
+                            sliderProgress = player.playbackItem.playbackProgress.value,
+                            onProgressChange = { p -> vm.onProgressChange(p, player) },
+                            onProgressChangeFinished = { vm.onProgressChangeFinished(player) },
+                            repeatState = vm.repeatState,
+                            onRepeatStateChange = { vm.onRepeatStateChange(context) },
+                            shuffle = vm.shuffle,
+                            onShuffleChange = { vm.onShuffleChange(context) },
+                            onNavigateBack = { navHostController.popBackStack() }
+                        )
+                    }
+                    val rotate by animateFloatAsState(
+                        targetValue = if (currentPage == 0) 90f else -90f,
+                        label = "rotate_animation"
+                    )
+                    Icon(
+                        painter = painterResource(id = R.drawable.arrow_left),
+                        contentDescription = "playlist",
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .rotate(rotate)
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                scope.launch {
+                                    if (currentPage == 0) pagerState.animateScrollToPage(1)
+                                    else pagerState.animateScrollToPage(
+                                        0,
+                                        pageOffsetFraction = -0.5f
+                                    )
+                                }
+                            }
+                    )
+                }
+                1 -> Playlist(isDarkMode)
+            }
         }
     }
 }
@@ -155,11 +246,10 @@ private fun PlaybackControl(
                         .padding(horizontal = 8.dp)
                 )
                 val playing by player.playbackItem.isPlaying
-                Column(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(bottom = 32.dp),
-                    verticalArrangement = Arrangement.Bottom
+                        .padding(bottom = 32.dp)
                 ) {
                     Control(
                         progress = sliderProgress,
@@ -174,6 +264,7 @@ private fun PlaybackControl(
                         previousEnabled = player.hasPrevious(),
                         onNext = { player.next() },
                         onPrevious = { player.previous() },
+                        modifier = Modifier.align(Alignment.BottomCenter),
                         onProgressChangeFinished = onProgressChangeFinished
                     )
                 }
@@ -394,4 +485,18 @@ private fun NavigateButton(
                 enabled = enabled
             )
     )
+}
+
+@Composable
+private fun Playlist(
+    isDarkMode: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val player = LocalPlayer.current
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .background(playlistBackgroundColor(isDarkMode))
+    ) {
+    }
 }
