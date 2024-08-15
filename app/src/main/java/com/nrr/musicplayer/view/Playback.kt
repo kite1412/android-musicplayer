@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -26,7 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -65,6 +65,7 @@ import com.nrr.musicplayer.ui.theme.DeeperCharcoal
 import com.nrr.musicplayer.ui.theme.SoftSilver
 import com.nrr.musicplayer.ui.theme.WarmCharcoal
 import com.nrr.musicplayer.util.RepeatState
+import com.nrr.musicplayer.util.ScrollConnection
 import com.nrr.musicplayer.view_model.PlaybackViewModel
 import kotlinx.coroutines.launch
 
@@ -110,7 +111,8 @@ fun Playback(
         VerticalPager(
             state = pagerState,
             pageSize = PageSize.Fixed(pageSize),
-            userScrollEnabled = currentPage == 0
+            userScrollEnabled = currentPage == 0,
+            pageNestedScrollConnection = ScrollConnection(false) {}
         ) {
             when (it) {
                 0 -> Column(
@@ -493,10 +495,12 @@ private fun Playlist(
     modifier: Modifier = Modifier
 ) {
     val player = LocalPlayer.current
-    LazyColumn(
+    Songs(
+        files = player.files,
         modifier = modifier
             .fillMaxSize()
-            .background(playlistBackgroundColor(isDarkMode))
-    ) {
-    }
+            .background(playlistBackgroundColor(isDarkMode)),
+        showIndicator = true,
+        contentPadding = PaddingValues(0.dp)
+    )
 }

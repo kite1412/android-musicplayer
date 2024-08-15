@@ -17,13 +17,17 @@ data class FormattedAudioFile(
     val raw: AudioFile = AudioFile()
 ) : Parcelable {
     companion object {
+        private fun durationDisplay(durationInSeconds: Int): String {
+            val minutes = durationInSeconds / 60
+            val remainingSeconds = durationInSeconds % 60
+            return String.format(null, "%d:%02d", minutes, remainingSeconds)
+        }
+
         private fun from(raw: AudioFile): FormattedAudioFile {
             val seconds = msToSec(raw.duration)
-            val minutes = seconds / 60
-            val remainingSeconds = seconds % 60
             return FormattedAudioFile(
                 displayName = raw.displayName.replace(".mp3", ""),
-                durationDisplay = String.format(null, "%d:%02d", minutes, remainingSeconds),
+                durationDisplay = durationDisplay(seconds),
                 duration = seconds,
                 raw = raw
             )
@@ -32,12 +36,14 @@ data class FormattedAudioFile(
         fun from(rawAudioFiles: List<AudioFile>): List<FormattedAudioFile> =
             rawAudioFiles.map { from(it) }
 
+        // TODO resolve durationDisplay if mediaItem's durationMs null
         @OptIn(UnstableApi::class)
         fun from(mediaItem: MediaItem?): FormattedAudioFile {
+            val seconds = msToSec(mediaItem?.mediaMetadata?.durationMs?.toInt() ?: 0)
             return FormattedAudioFile(
                 displayName = mediaItem?.mediaMetadata?.title?.toString() ?: "",
-                duration = msToSec(mediaItem?.mediaMetadata?.durationMs?.toInt() ?: 0),
-                raw = mediaItem.toAudioFile()
+                duration = seconds,
+                raw = mediaItem?.toAudioFile() ?: AudioFile()
             )
         }
     }

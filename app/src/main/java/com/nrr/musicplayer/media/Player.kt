@@ -1,5 +1,8 @@
 package com.nrr.musicplayer.media
 
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaController
 import com.nrr.musicplayer.model.FormattedAudioFile
@@ -18,7 +21,7 @@ import androidx.media3.common.Player as player
 class Player(
     private val mediaController: MediaController?,
     val playbackItem: PlaybackItem = PlaybackItem(),
-    private var files: List<FormattedAudioFile> = emptyList(),
+    var files: SnapshotStateList<FormattedAudioFile> = mutableStateListOf(),
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 ) : player.Listener {
     private var prevProgress = 0f
@@ -39,7 +42,7 @@ class Player(
         fun create(mediaController: MediaController?): Player = Player(
             mediaController = mediaController,
             playbackItem = PlaybackItem.create(mediaController),
-            files = resolveFiles(mediaController)
+            files = resolveFiles(mediaController).toMutableStateList()
         )
     }
 
@@ -68,7 +71,7 @@ class Player(
         playbackItem.data.value = FormattedAudioFile.from(mediaItem).also {
             Log.d("playing: ${it.displayName}")
         }
-        playbackItem.index = mediaController?.currentMediaItemIndex ?: 0
+        playbackItem.index.intValue = mediaController?.currentMediaItemIndex ?: 0
     }
 
     override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -86,8 +89,8 @@ class Player(
         playbackItem.data.value = file
         if (!playbackItem.isPlaying.value) playbackItem.isPlaying.value = true
         playbackItem.playbackProgress.value = msToFloatProgress(startPosition.toInt(), file.duration)
-        playbackItem.index = startIndex
-        this.files = files
+        playbackItem.index.intValue = startIndex
+        this.files = files.toMutableStateList()
         mediaController?.playMedia(startIndex, files, startPosition)
     }
 
@@ -100,7 +103,7 @@ class Player(
         play: Boolean
     ) {
         if (play) play(
-            playbackItem.index,
+            playbackItem.index.intValue,
             files,
             mediaController?.currentPosition ?: 0L
         ) else pause()

@@ -1,10 +1,12 @@
 package com.nrr.musicplayer.model
 
 import androidx.annotation.OptIn
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
@@ -14,7 +16,7 @@ data class PlaybackItem(
     val playbackProgress: MutableState<Float> = mutableFloatStateOf(0f),
     val data: MutableState<FormattedAudioFile> = mutableStateOf(FormattedAudioFile()),
     val isPlaying: MutableState<Boolean> = mutableStateOf(false),
-    var index: Int = 0
+    var index: MutableIntState = mutableIntStateOf(0)
 ) {
     companion object {
         @OptIn(UnstableApi::class)
@@ -28,7 +30,7 @@ data class PlaybackItem(
                     )
                 ),
                 isPlaying = mutableStateOf(mediaController?.isPlaying ?: false),
-                index = mediaController?.currentMediaItemIndex ?: 0
+                index = mutableIntStateOf(mediaController?.currentMediaItemIndex ?: 0)
             )
     }
 }

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -28,8 +27,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,7 +56,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,7 +67,6 @@ import com.nrr.musicplayer.LocalPlayer
 import com.nrr.musicplayer.R
 import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.model.noData
-import com.nrr.musicplayer.ui.theme.SoftSilver
 import com.nrr.musicplayer.ui.theme.WarmCharcoal
 import com.nrr.musicplayer.util.Destination
 import com.nrr.musicplayer.util.ScrollConnection
@@ -155,8 +150,6 @@ fun Main(
                 modifier = Modifier.fillMaxSize(),
                 state = state,
                 contentPadding = PaddingValues(
-                    start = 8.dp,
-                    end = 8.dp,
                     top = headerHeight + 16.dp,
                     bottom = playBarHeight + playBarPadding * 2
                 )
@@ -396,77 +389,5 @@ private fun PlayBarActions(
                 ),
             tint = tint
         )
-    }
-}
-
-@Composable
-private fun Songs(
-    files: List<FormattedAudioFile>,
-    modifier: Modifier = Modifier,
-    state: LazyListState = rememberLazyListState(),
-    contentPadding: PaddingValues = PaddingValues(
-        horizontal = 8.dp
-    ),
-) {
-    val player = LocalPlayer.current
-    if (files.isNotEmpty()) LazyColumn(
-        modifier = modifier,
-        state = state,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = contentPadding
-    ) {
-        items(files.size) {
-            Song(
-                file = files[it],
-                modifier = Modifier.clickable {
-                    player.play(it, files)
-                }
-            )
-        }
-    } else Column(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        val config = LocalConfiguration.current
-        Icon(
-            painter = painterResource(id = R.drawable.box_open),
-            contentDescription = "empty",
-            modifier = Modifier.size(config.screenWidthDp.dp / 3),
-            tint = if (isSystemInDarkTheme()) SoftSilver else WarmCharcoal
-        )
-        Text(
-            text = "No songs found",
-            fontSize = 20.sp
-        )
-    }
-}
-
-@Composable
-private fun Song(
-    file: FormattedAudioFile,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Max),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        MusicNoteIcon()
-        Column(
-            modifier = Modifier.fillMaxHeight(),
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = file.displayName,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = file.durationDisplay,
-                fontSize = 12.sp
-            )
-        }
     }
 }
