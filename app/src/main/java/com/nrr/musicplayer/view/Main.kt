@@ -38,7 +38,6 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -61,11 +60,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.nrr.musicplayer.LocalAudioFilesLoader
-import com.nrr.musicplayer.LocalPermissionGranted
 import com.nrr.musicplayer.LocalPlayer
 import com.nrr.musicplayer.R
-import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.model.noData
 import com.nrr.musicplayer.ui.theme.WarmCharcoal
 import com.nrr.musicplayer.util.Destination
@@ -94,18 +90,8 @@ fun Main(
         mutableStateOf(totalHeaderHeight)
     }
     val sharedViewModel = sharedViewModel()
-    val filesLoader = LocalAudioFilesLoader.current
-    val granted = LocalPermissionGranted.current
     var titleAlpha by remember {
         mutableFloatStateOf(1f)
-    }
-    LaunchedEffect(granted) {
-        if (!vm.executeOnce && granted) {
-            filesLoader().also {
-                sharedViewModel.addAudioFiles(FormattedAudioFile.from(it.audioFiles))
-            }
-            vm.executeOnce = true
-        }
     }
     val density = LocalDensity.current
     val state = rememberLazyListState()

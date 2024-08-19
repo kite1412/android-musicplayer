@@ -18,7 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.media3.common.Player as player
 
-class Player(
+class Player private constructor (
     private val mediaController: MediaController?,
     val playbackItem: PlaybackItem = PlaybackItem(),
     var files: SnapshotStateList<FormattedAudioFile> = mutableStateListOf(),
@@ -43,6 +43,12 @@ class Player(
             mediaController = mediaController,
             playbackItem = PlaybackItem.create(mediaController),
             files = resolveFiles(mediaController).toMutableStateList()
+        )
+
+        fun create(mediaController: MediaController?, files: SnapshotStateList<FormattedAudioFile>): Player = Player(
+            mediaController = mediaController,
+            playbackItem = PlaybackItem.create(mediaController),
+            files = files
         )
     }
 

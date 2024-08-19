@@ -56,22 +56,22 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.nrr.musicplayer.media.Player
 import com.nrr.musicplayer.model.AudioFile
 import com.nrr.musicplayer.model.AudioFiles
+import com.nrr.musicplayer.model.FormattedAudioFile
 import com.nrr.musicplayer.service.PlaybackService
 import com.nrr.musicplayer.ui.theme.MusicPlayerTheme
 import com.nrr.musicplayer.util.Destination
 import com.nrr.musicplayer.util.Log
 import com.nrr.musicplayer.util.minApiLevel
+import com.nrr.musicplayer.util.sharedViewModel
 import com.nrr.musicplayer.view.Main
 import com.nrr.musicplayer.view.Playback
 
-val LocalAudioFilesLoader = compositionLocalOf<() -> AudioFiles> { { AudioFiles() } }
-val LocalPermissionGranted = compositionLocalOf { false }
-val LocalPlayer = compositionLocalOf { Player(null) }
+val LocalPlayer = compositionLocalOf { Player.create(null) }
 val Context.dataStore by preferencesDataStore("settings")
 
 class MainActivity : ComponentActivity() {
     private var mediaController: MediaController? by mutableStateOf(null)
-    private var player: Player by mutableStateOf(Player(null))
+    private var player: Player by mutableStateOf(Player.create(null))
 
     @SuppressLint("ComposableNaming")
     @Composable
@@ -158,6 +158,14 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @Composable
     private fun App() {
+        val sharedViewModel = sharedViewModel()
+        var permissionGranted by rememberSaveable {
+            mutableStateOf(false)
+        }
+        LaunchedEffect(permissionGranted) {
+            if (permissionGranted)
+                sharedViewModel.loadAudioFiles(FormattedAudioFile.from(loadAudioFiles().audioFiles))
+        }
         LaunchedEffect(true) {
             val token = SessionToken(
                 this@MainActivity,
@@ -168,7 +176,7 @@ class MainActivity : ComponentActivity() {
                     {
                         mediaController?.removeListener(player)
                         mediaController = get().apply {
-                            player = Player.create(this)
+                            player = Player.create(this, sharedViewModel.audioFiles)
                             player.listen()
                             addListener(this@MainActivity.player)
                         }
@@ -176,9 +184,6 @@ class MainActivity : ComponentActivity() {
                     MoreExecutors.directExecutor()
                 )
             }
-        }
-        var permissionGranted by rememberSaveable {
-            mutableStateOf(false)
         }
         var showWarning by rememberSaveable {
             mutableStateOf(false)
@@ -192,44 +197,40 @@ class MainActivity : ComponentActivity() {
             if (!musicAudioAccessPermitted()) requestPermission(permissionLauncher)
             else permissionGranted = true
         }
-        CompositionLocalProvider(value = LocalAudioFilesLoader provides { loadAudioFiles() }) {
-            CompositionLocalProvider(value = LocalPermissionGranted provides permissionGranted) {
-                CompositionLocalProvider(value = LocalPlayer provides player) {
-                    MusicPlayerTheme {
-                        adjustSystemBars()
-                        Scaffold(
-                            modifier = Modifier.fillMaxSize(),
-                        ) { _ ->
-                            Box(
-                                modifier = Modifier
-                                    .background(MaterialTheme.colorScheme.background)
-                                    .windowInsetsPadding(WindowInsets.navigationBars)
-                                    .consumeWindowInsets(WindowInsets.navigationBars)
+        CompositionLocalProvider(value = LocalPlayer provides player) {
+            MusicPlayerTheme {
+                adjustSystemBars()
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                ) { _ ->
+                    Box(
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.background)
+                            .windowInsetsPadding(WindowInsets.navigationBars)
+                            .consumeWindowInsets(WindowInsets.navigationBars)
+                    ) {
+                        val controller = rememberNavController()
+                        NavHost(
+                            navController = controller,
+                            startDestination = Destination.Main()
+                        ) {
+                            composable(Destination.Main()) { Main(controller) }
+                            composable(
+                                route = Destination.Playback(),
+                                enterTransition = { slideInVertically { it } },
+                                exitTransition = { slideOutVertically { it } }
                             ) {
-                                val controller = rememberNavController()
-                                NavHost(
-                                    navController = controller,
-                                    startDestination = Destination.Main()
-                                ) {
-                                    composable(Destination.Main()) { Main(controller) }
-                                    composable(
-                                        route = Destination.Playback(),
-                                        enterTransition = { slideInVertically { it } },
-                                        exitTransition = { slideOutVertically { it } }
-                                    ) {
-                                        Playback(controller)
-                                    }
-                                }
+                                Playback(controller)
                             }
-                            PermissionWarning(
-                                show = showWarning,
-                                onRequestPermission = {
-                                    showWarning = false
-                                    requestPermission(permissionLauncher)
-                                }
-                            )
                         }
                     }
+                    PermissionWarning(
+                        show = showWarning,
+                        onRequestPermission = {
+                            showWarning = false
+                            requestPermission(permissionLauncher)
+                        }
+                    )
                 }
             }
         }

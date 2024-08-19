@@ -6,8 +6,12 @@ import com.nrr.musicplayer.model.FormattedAudioFile
 
 class SharedViewModel : ViewModel() {
     var audioFiles = mutableStateListOf<FormattedAudioFile>()
+    private var executeOnce: Boolean = false
 
-    fun addAudioFiles(files: List<FormattedAudioFile>) {
-        audioFiles.addAll(files)
+    fun loadAudioFiles(files: List<FormattedAudioFile>) {
+        if (!executeOnce) {
+            audioFiles.addAll(files)
+            executeOnce = true
+        }
     }
 }
