@@ -62,6 +62,7 @@ import com.nrr.musicplayer.ui.theme.MusicPlayerTheme
 import com.nrr.musicplayer.util.Destination
 import com.nrr.musicplayer.util.Log
 import com.nrr.musicplayer.util.minApiLevel
+import com.nrr.musicplayer.util.msToSec
 import com.nrr.musicplayer.util.sharedViewModel
 import com.nrr.musicplayer.view.Main
 import com.nrr.musicplayer.view.Playback
@@ -102,6 +103,7 @@ class MainActivity : ComponentActivity() {
         try {
             cursor?.let {
                 while (it.moveToNext()) {
+                    if (msToSec(it.getInt(1)) <= 1) continue
                     audioFiles.add(
                         AudioFile(
                             it.getString(0),

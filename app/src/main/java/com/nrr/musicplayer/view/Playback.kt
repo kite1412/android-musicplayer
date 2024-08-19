@@ -11,6 +11,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -43,6 +46,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -53,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -61,9 +66,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.nrr.musicplayer.LocalPlayer
 import com.nrr.musicplayer.R
+import com.nrr.musicplayer.media.Player
 import com.nrr.musicplayer.ui.theme.DeeperCharcoal
 import com.nrr.musicplayer.ui.theme.SoftSilver
 import com.nrr.musicplayer.ui.theme.WarmCharcoal
+import com.nrr.musicplayer.util.Log
 import com.nrr.musicplayer.util.RepeatState
 import com.nrr.musicplayer.util.ScrollConnection
 import com.nrr.musicplayer.view_model.PlaybackViewModel
@@ -96,6 +103,10 @@ fun Playback(
         label = "playback_control_clip"
     )
     val scope = rememberCoroutineScope()
+    val state = rememberLazyListState()
+    LaunchedEffect(pagerState.settledPage) {
+        state.scrollToItem(player.playbackItem.index.intValue)
+    }
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
@@ -134,6 +145,14 @@ fun Playback(
                             ),
                             spotColor = if (isDarkMode) Color.White else Color.Black
                         )
+                        .pointerInput(currentPage) {
+                            if (currentPage == 1) detectVerticalDragGestures { _, dragAmount ->
+                                Log.d(dragAmount.toString())
+                                if (dragAmount > 0) scope.launch {
+                                    pagerState.animateScrollToPage(0, -0.5f)
+                                }
+                            }
+                        }
                         .padding(bottom = 8.dp),
                     verticalArrangement = Arrangement.Bottom
                 ) {
@@ -153,7 +172,7 @@ fun Playback(
                             onRepeatStateChange = { vm.onRepeatStateChange(context) },
                             shuffle = vm.shuffle,
                             onShuffleChange = { vm.onShuffleChange(context) },
-                            onNavigateBack = { navHostController.popBackStack() }
+                            onNavigateBack = { navHostController.popBackStack() },
                         )
                     }
                     val rotate by animateFloatAsState(
@@ -179,7 +198,7 @@ fun Playback(
                             }
                     )
                 }
-                1 -> Playlist(isDarkMode)
+                1 -> Playlist(player, isDarkMode, state = state)
             }
         }
     }
@@ -491,15 +510,17 @@ private fun NavigateButton(
 
 @Composable
 private fun Playlist(
+    player: Player,
     isDarkMode: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    state: LazyListState = rememberLazyListState()
 ) {
-    val player = LocalPlayer.current
     Songs(
         files = player.files,
         modifier = modifier
             .fillMaxSize()
             .background(playlistBackgroundColor(isDarkMode)),
+        state = state,
         showIndicator = true,
         contentPadding = PaddingValues(0.dp)
     )
